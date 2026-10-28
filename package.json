@@ -1,0 +1,26 @@
+{
+  "name": "chorus",
+  "private": true,
+  "type": "module",
+  "description": "Announce news together: everyone writes their own post, and it goes out from their own Buffer account",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=.env src/dev.ts",
+    "test": "node --test",
+    "typecheck": "tsc",
+    "lint": "biome check .",
+    "format": "biome check --write ."
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "@types/express": "5.0.6",
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2"
+  }
+}

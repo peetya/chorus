@@ -23,7 +23,8 @@ after another through one day in one city (a relay). Built on Buffer's public AP
 
 ```bash
 npm install
-npm run dev          # local server on http://localhost:3000
+npm run cert         # once: local https certificate with mkcert (Buffer needs https)
+npm run dev          # local server on https://localhost:3000
 npm test             # node --test
 npm run typecheck    # tsc, no emit
 npm run lint         # biome check
@@ -36,9 +37,15 @@ and a movable clock to fast-forward a wave. It refuses to start in production.
 ## Layout
 
 - `src/app.ts`: the Express app, exported for Vercel (which finds it by this path)
-- `src/dev.ts`: the local server. It also serves `public/`, which Vercel serves from its CDN instead
+- `src/dev.ts`: the local server, on https when `.cert/` exists. It also serves `public/`, which Vercel serves
+  from its CDN instead
+- `src/buffer.ts`: everything that talks to Buffer (OAuth, GraphQL). Nothing else calls Buffer
+- `src/auth.ts`: sign in, sign out, `/me`
+- `src/session.ts`, `src/crypto.ts`: sealed (AES-256-GCM) cookies
+- `src/html.ts`: `page()` and `escapeHtml()`. Escape every value from a person or from Buffer
+- `src/config.ts`: `env()`, read when used so the tests run without a `.env`
 - `public/`: static files
-- `test/`: `node --test` tests, named `*.test.ts`
+- `test/`: `node --test` tests, named `*.test.ts`. `test/server.ts` starts the app on a free port
 
 Imports use the `.ts` extension (`import app from "./app.ts"`), because Node runs the files as they are.
 Only erasable TypeScript: no `enum`, no `namespace`, no parameter properties.

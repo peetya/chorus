@@ -10,11 +10,19 @@ Built on the [Buffer API](https://developers.buffer.com). Work in progress, buil
 
 ## Run it locally
 
-You need Node 24.
+You need Node 24 and [mkcert](https://github.com/FiloSottile/mkcert) (Buffer only accepts https redirect
+URIs, localhost too).
+
+1. Create an app client at [publish.buffer.com/settings/api](https://publish.buffer.com/settings/api) with
+   the redirect URI `https://localhost:3000/callback`
+2. Copy `.env.example` to `.env` and fill it in
+3. Run it:
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000
+mkcert -install    # once per machine
+npm run cert
+npm run dev        # https://localhost:3000
 npm test
 npm run typecheck
 npm run lint

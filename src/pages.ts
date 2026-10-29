@@ -8,6 +8,7 @@ import {
   graphql,
   isMock,
 } from "./buffer.ts";
+import { checkPost } from "./checks.ts";
 import {
   addDays,
   type Chorus,
@@ -24,12 +25,15 @@ import {
   joinChorus,
   joinedBy,
   postsOf,
+  saveText,
 } from "./posts.ts";
 import { getAccessToken, getUser, namesOf } from "./users.ts";
 import { chorusNotFound, chorusPage } from "./views/chorus.ts";
 import { joinPage } from "./views/join.ts";
+import { shortName } from "./views/labels.ts";
 import { myChoruses } from "./views/my-choruses.ts";
 import { newChorusForm } from "./views/new-chorus.ts";
+import { checkList, writePage } from "./views/write.ts";
 
 export const pages = Router();
 
@@ -185,6 +189,76 @@ pages.post(
       );
     }
     await joinChorus(chorus._id, session.userId, channel);
-    res.redirect(303, `/c/${chorus._id}`);
+    res.redirect(303, `/c/${chorus._id}/post`);
+  },
+);
+
+async function organizerName(chorus: Chorus): Promise<string> {
+  return (
+    (await namesOf([chorus.ownerId])).get(chorus.ownerId) ?? "the organizer"
+  );
+}
+
+pages.get("/c/:id/post", async (req, res) => {
+  const session = readSession(req);
+  const chorus = await getChorus(req.params.id);
+  if (!chorus) return notFound(res, session);
+  if (!session) return res.redirect(`/login?next=/c/${chorus._id}/post`);
+  const post = await findPost(chorus._id, session.userId);
+  if (!post) return res.redirect(`/c/${chorus._id}/join`);
+  const organizer = await organizerName(chorus);
+  // A new post starts with the main hashtag, so nobody forgets it.
+  const text = post.text ?? `\n\n${chorus.hashtags[0] ?? ""}`;
+  const result = checkPost(
+    text,
+    chorus,
+    post.channelService,
+    shortName(organizer),
+  );
+  res.send(
+    page(
+      "Your post",
+      writePage(chorus, post, organizer, text, result, req.query.saved === "1"),
+      { viewer: viewer(session), script: "write.js" },
+    ),
+  );
+});
+
+pages.post(
+  "/c/:id/post",
+  express.urlencoded({ extended: false, limit: "64kb" }),
+  async (req, res) => {
+    const session = readSession(req);
+    const chorus = await getChorus(req.params.id);
+    if (!chorus) return notFound(res, session);
+    if (!session) return res.redirect(303, `/login?next=/c/${chorus._id}/post`);
+    const text = typeof req.body?.text === "string" ? req.body.text : "";
+    // A draft is saved even when it's too long: the checks stop it at approval, not here.
+    const saved = await saveText(chorus._id, session.userId, text);
+    res.redirect(
+      303,
+      saved ? `/c/${chorus._id}/post?saved=1` : `/c/${chorus._id}`,
+    );
+  },
+);
+
+// The editor sends the text here while the person types. No Buffer call, so it costs nothing.
+pages.post(
+  "/c/:id/post/check",
+  express.json({ limit: "64kb" }),
+  async (req, res) => {
+    const session = readSession(req);
+    const chorus = await getChorus(req.params.id);
+    const post =
+      chorus && session && (await findPost(chorus._id, session.userId));
+    if (!chorus || !post) return res.sendStatus(403);
+    const text = typeof req.body?.text === "string" ? req.body.text : "";
+    const organizer = shortName(await organizerName(chorus));
+    res
+      .type("html")
+      .send(
+        checkList(checkPost(text, chorus, post.channelService, organizer))
+          .value,
+      );
   },
 );

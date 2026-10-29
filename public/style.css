@@ -877,3 +877,152 @@ a.chorus-card:hover {
   border-color: var(--line);
   color: inherit;
 }
+
+/* Writing your post */
+
+.post-to {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+}
+
+form.write textarea {
+  min-height: 260px;
+  font-size: 17px;
+}
+
+.counter {
+  margin: 0;
+  align-self: flex-end;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.counter.over {
+  color: var(--error);
+  font-weight: 500;
+}
+
+.checks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 15px;
+}
+
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  overflow-wrap: anywhere;
+}
+
+.check::before {
+  flex: none;
+  width: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.check.ok::before {
+  content: "✓";
+  color: #15803d;
+}
+
+.check.warn::before {
+  content: "!";
+  color: var(--accent-ink);
+}
+
+.check.block {
+  color: var(--error);
+  font-weight: 600;
+}
+
+.check.block::before {
+  content: "×";
+}
+
+[data-results] {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.brief-panel {
+  display: block;
+}
+
+.brief-body {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.brief-panel h2 {
+  font-family: var(--heading);
+  font-size: 22px;
+  color: var(--ink);
+}
+
+.brief-panel summary {
+  cursor: pointer;
+}
+
+.brief-panel summary h2 {
+  display: inline;
+}
+
+/* On a phone the brief goes above the editor, so it stays in sight while writing. */
+@media (max-width: 979px) {
+  .write-layout .side {
+    order: -1;
+  }
+}
+
+@media (min-width: 980px) {
+  .brief-panel summary {
+    pointer-events: none;
+    list-style: none;
+  }
+
+  .brief-panel summary::-webkit-details-marker {
+    display: none;
+  }
+}
+
+.brief-panel h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.brief-panel p,
+.brief-panel ol,
+.brief-panel ul {
+  margin: 0;
+}
+
+.brief-panel ol,
+.brief-panel ul {
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.goes-out {
+  background: var(--soft);
+  border-radius: 16px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

@@ -48,8 +48,10 @@ comes with the wave.
 - `src/auth.ts`: sign in (also as a fake person in mock mode), sign out, `readSession()`
 - `src/choruses.ts`: the `choruses` collection, and reading and checking the "Start a Chorus" form
 - `src/posts.ts`: the `posts` collection (one per person in a Chorus), joining, and which channels can't post
-- `src/pages.ts`: the routes for My Choruses (`/me`), Start a Chorus (`/new`), the Chorus page (`/c/:id`)
-  and joining it (`/c/:id/join`)
+- `src/checks.ts`: the free checks on a post (length the way each network counts it, the main hashtag,
+  the hashtag limit, "Please avoid", and facts that aren't on the fact card). Only "too long" blocks
+- `src/pages.ts`: the routes for My Choruses (`/me`), Start a Chorus (`/new`), the Chorus page (`/c/:id`),
+  joining it (`/c/:id/join`) and writing your post (`/c/:id/post`)
 - `src/session.ts`, `src/crypto.ts`: sealed (AES-256-GCM) cookies
 - `src/html.ts`: `page()` (with the header), and the `html` tagged template that escapes every value
 - `src/views/`: the markup of each screen, as functions that return `html`. `labels.ts` has the small
@@ -57,7 +59,8 @@ comes with the wave.
   `auth.ts` and hold no markup
 - `src/config.ts`: `env()` and `secretEnv()`, read when used so the tests run without a `.env`
 - `public/`: static files: the landing page, `style.css` (the design's colors and fonts), the logo, and
-  `brief.js` (list rows and the live fact card on the form), `copy.js` (the invite link's copy button).
+  `brief.js` (list rows and the live fact card on the form), `copy.js` (the invite link's copy button), `write.js` (sends the text to
+  `/c/:id/post/check` while you type; the checks run only on the server, so they live in one place).
   Pages work without JS where they can
 - `test/`: `node --test` tests, named `*.test.ts`. `test/server.ts` starts the app on a free port
 

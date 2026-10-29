@@ -11,6 +11,8 @@ export type Post = {
   channelName: string;
   channelService: string; // from Buffer, never from the browser: it decides the length limit
   channelTz: string;
+  text?: string; // the person's own words; only they see it until it's posted
+  savedAt?: Date;
   status: "drafting" | "scheduled" | "sent" | "failed" | "withdrawn";
   tzConfirmed: boolean; // Buffer's time zone defaults to Europe/London, so people confirm theirs
   aiShaped: boolean;
@@ -51,6 +53,21 @@ export async function joinChorus(
     },
     { upsert: true },
   );
+}
+
+export const MAX_TEXT = 10_000;
+
+// Only while drafting: once a post is scheduled, its text lives in Buffer and changes go through there.
+export async function saveText(
+  chorusId: string,
+  userId: string,
+  text: string,
+): Promise<boolean> {
+  const { matchedCount } = await (await posts()).updateOne(
+    { chorusId, userId, status: "drafting" },
+    { $set: { text: text.slice(0, MAX_TEXT), savedAt: new Date() } },
+  );
+  return matchedCount === 1;
 }
 
 export async function findPost(

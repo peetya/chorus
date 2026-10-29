@@ -18,7 +18,7 @@ function joinBox({ chorus, post, over, isOrganizer }: ChorusView): Html {
   if (over) return html`<p>This Chorus is over. Joining is closed.</p>`;
   if (post) {
     return html`<p class="joined">You're in. Your post goes out from <strong>${post.channelName}</strong> (${serviceName(post.channelService)}) on ${when} ${place(post.channelTz)} time.</p>
-<p class="muted small">Writing your post comes next.</p>
+<a href="/c/${chorus._id}/post" class="button primary big">${post.text ? "Edit your post" : "Write your post"}</a>
 <a href="/c/${chorus._id}/join" class="button">Change channel</a>`;
   }
   return html`<p class="muted">On ${when}, each post goes out at that time in the person's own time zone.</p>

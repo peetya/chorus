@@ -1,6 +1,7 @@
 // All calls to Buffer go through this file.
 import { createHash, randomBytes } from "node:crypto";
 import { env } from "./config.ts";
+import { mockGraphql } from "./mock.ts";
 
 const AUTH_URL = "https://auth.buffer.com/auth";
 const TOKEN_URL = "https://auth.buffer.com/token";
@@ -97,11 +98,21 @@ type GraphqlResponse<T> = {
   errors?: { message: string; extensions?: { code?: string } }[];
 };
 
+// Mock mode answers from fake people instead of Buffer (see mock.ts). Never in production.
+export function isMock(): boolean {
+  if (process.env.BUFFER_MOCK !== "1") return false;
+  if (process.env.VERCEL_ENV === "production") {
+    throw new Error("BUFFER_MOCK is on in production. Turn it off.");
+  }
+  return true;
+}
+
 export async function graphql<T>(
   accessToken: string,
   query: string,
   variables?: Record<string, unknown>,
 ): Promise<T> {
+  if (isMock()) return mockGraphql(accessToken, query) as T;
   const res = await fetch(API_URL, {
     method: "POST",
     headers: {

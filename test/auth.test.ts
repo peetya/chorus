@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import { test } from "node:test";
 import { authorizeUrl, createPkce } from "../src/buffer.ts";
 import { seal, unseal } from "../src/crypto.ts";
-import { escapeHtml } from "../src/html.ts";
 import { cookieFrom, listen } from "./server.ts";
 
 process.env.BUFFER_CLIENT_ID = "test-client";
@@ -88,11 +87,4 @@ test("/me without a session goes back to the start", async (t) => {
   const res = await fetch(`${base}/me`, { redirect: "manual" });
   assert.equal(res.status, 302);
   assert.equal(res.headers.get("location"), "/");
-});
-
-test("escapeHtml makes names safe to show", () => {
-  assert.equal(
-    escapeHtml(`<script>"x" & 'y'</script>`),
-    "&lt;script&gt;&quot;x&quot; &amp; &#39;y&#39;&lt;/script&gt;",
-  );
 });

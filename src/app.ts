@@ -1,6 +1,6 @@
 import express, { type ErrorRequestHandler } from "express";
 import { auth } from "./auth.ts";
-import { page } from "./html.ts";
+import { html, page } from "./html.ts";
 import { pages } from "./pages.ts";
 
 const app = express();
@@ -23,14 +23,13 @@ const onError: ErrorRequestHandler = (err, _req, res, _next) => {
   console.error(
     JSON.stringify({ event: "request_failed", message: String(err?.message) }),
   );
-  res
-    .status(500)
-    .send(
-      page(
-        "Something went wrong",
-        '<h1>Something went wrong</h1>\n<p>Please try again in a minute. <a href="/">Back to the start</a></p>',
-      ),
-    );
+  res.status(500).send(
+    page(
+      "Something went wrong",
+      html`<h1>Something went wrong</h1>
+<p>Please try again in a minute. <a href="/">Back to the start</a></p>`,
+    ),
+  );
 };
 app.use(onError);
 

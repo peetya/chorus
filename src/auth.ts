@@ -10,10 +10,11 @@ import {
   isMock,
   type Tokens,
 } from "./buffer.ts";
-import { escapeHtml, page } from "./html.ts";
+import { page } from "./html.ts";
 import { mockTokens, PEOPLE } from "./mock.ts";
 import { clearSealed, readSealed, writeSealed } from "./session.ts";
 import { saveUser } from "./users.ts";
+import { mockSignIn, signInProblem } from "./views/sign-in.ts";
 
 const OAUTH_COOKIE = "chorus_oauth";
 const SESSION_COOKIE = "chorus_session";
@@ -30,14 +31,7 @@ export function readSession(req: Request): Session | null {
 }
 
 function signInAgain(res: Response, status: number, message: string) {
-  res
-    .status(status)
-    .send(
-      page(
-        "Sign in",
-        `<h1>Sign in</h1>\n<p>${escapeHtml(message)}</p>\n<p><a href="/login">Try again</a></p>`,
-      ),
-    );
+  res.status(status).send(page("Sign in", signInProblem(message)));
 }
 
 async function signIn(res: Response, tokens: Tokens) {
@@ -55,22 +49,8 @@ async function signIn(res: Response, tokens: Tokens) {
   res.redirect("/me");
 }
 
-function mockSignInPage(): string {
-  const people = PEOPLE.map(
-    (p) =>
-      `<li><button type="submit" name="person" value="${p.id}">${escapeHtml(p.name)}, ${escapeHtml(p.city)}</button></li>`,
-  ).join("\n");
-  return `<h1>Sign in as</h1>
-<p>Mock mode: these people are fake, and nothing reaches Buffer.</p>
-<form method="post" action="/login/mock">
-<ul class="people">
-${people}
-</ul>
-</form>`;
-}
-
 auth.get("/login", (_req, res) => {
-  if (isMock()) return res.send(page("Sign in", mockSignInPage()));
+  if (isMock()) return res.send(page("Sign in", mockSignIn(PEOPLE)));
   const { verifier, challenge } = createPkce();
   const state = randomBytes(16).toString("base64url");
   // The verifier stays with us until the token exchange; Buffer only ever sees its hash.

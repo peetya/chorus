@@ -28,6 +28,9 @@ npm run typecheck
 npm run lint
 ```
 
+No Buffer account? Set `BUFFER_MOCK=1` and `SESSION_SECRET` in `.env` and skip step 1. Sign-in then shows a
+list of fake people in different time zones, and nothing reaches Buffer.
+
 ## License
 
 [FSL-1.1-ALv2](LICENSE.md): you can read, run and change the code, but not offer it as a competing service.

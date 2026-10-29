@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { type Response, Router } from "express";
+import express, { type Response, Router } from "express";
 import {
   ACCOUNT_QUERY,
   type Account,
@@ -7,8 +7,10 @@ import {
   createPkce,
   exchangeCode,
   graphql,
+  isMock,
 } from "./buffer.ts";
 import { escapeHtml, page } from "./html.ts";
+import { PEOPLE } from "./mock.ts";
 import { clearSealed, readSealed, writeSealed } from "./session.ts";
 
 const OAUTH_COOKIE = "chorus_oauth";
@@ -30,7 +32,36 @@ function signInAgain(res: Response, status: number, message: string) {
     );
 }
 
+async function signIn(res: Response, accessToken: string) {
+  const { account } = await graphql<{ account: Account }>(
+    accessToken,
+    ACCOUNT_QUERY,
+  );
+  writeSealed(
+    res,
+    SESSION_COOKIE,
+    { accountId: account.id, name: account.name } satisfies Session,
+    { maxAgeMs: 30 * 24 * 60 * 60_000 },
+  );
+  res.redirect("/me");
+}
+
+function mockSignInPage(): string {
+  const people = PEOPLE.map(
+    (p) =>
+      `<li><button type="submit" name="person" value="${p.id}">${escapeHtml(p.name)}, ${escapeHtml(p.city)}</button></li>`,
+  ).join("\n");
+  return `<h1>Sign in as</h1>
+<p>Mock mode: these people are fake, and nothing reaches Buffer.</p>
+<form method="post" action="/login/mock">
+<ul>
+${people}
+</ul>
+</form>`;
+}
+
 auth.get("/login", (_req, res) => {
+  if (isMock()) return res.send(page("Sign in", mockSignInPage()));
   const { verifier, challenge } = createPkce();
   const state = randomBytes(16).toString("base64url");
   // The verifier stays with us until the token exchange; Buffer only ever sees its hash.
@@ -65,19 +96,20 @@ auth.get("/callback", async (req, res) => {
   }
 
   const tokens = await exchangeCode(code, oauth.verifier);
-  const { account } = await graphql<{ account: Account }>(
-    tokens.accessToken,
-    ACCOUNT_QUERY,
-  );
   // The tokens are dropped for now. The token store will keep them, encrypted.
-  writeSealed(
-    res,
-    SESSION_COOKIE,
-    { accountId: account.id, name: account.name } satisfies Session,
-    { maxAgeMs: 30 * 24 * 60 * 60_000 },
-  );
-  res.redirect("/me");
+  await signIn(res, tokens.accessToken);
 });
+
+auth.post(
+  "/login/mock",
+  express.urlencoded({ extended: false }),
+  async (req, res) => {
+    if (!isMock()) return res.sendStatus(404);
+    const person = PEOPLE.find((p) => p.id === req.body?.person);
+    if (!person) return signInAgain(res, 400, "Pick someone from the list.");
+    await signIn(res, person.id);
+  },
+);
 
 auth.post("/logout", (_req, res) => {
   clearSealed(res, SESSION_COOKIE);
@@ -91,7 +123,7 @@ auth.get("/me", (req, res) => {
     page(
       "Chorus",
       `<h1>Hi ${escapeHtml(session.name)}</h1>
-<p>You're signed in with Buffer.</p>
+<p>${isMock() ? "You're signed in as a fake person (mock mode)." : "You're signed in with Buffer."}</p>
 <form method="post" action="/logout"><button type="submit">Sign out</button></form>`,
     ),
   );

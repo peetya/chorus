@@ -31,8 +31,10 @@ npm run lint         # biome check
 npm run format       # biome check --write
 ```
 
-Coming with the mock mode PR: `BUFFER_MOCK=1` runs without a Buffer account: fake people in different time zones, fake GraphQL answers,
-and a movable clock to fast-forward a wave. It refuses to start in production.
+`BUFFER_MOCK=1` runs without a Buffer account: "sign in as" fake people in different time zones, and fake
+GraphQL answers in `src/mock.ts`. It refuses to run in production. When you add a Buffer call, add its
+answer to the mock in the same change, in Buffer's response shape. A movable clock to fast-forward a wave
+comes with the wave.
 
 ## Layout
 
@@ -40,7 +42,8 @@ and a movable clock to fast-forward a wave. It refuses to start in production.
 - `src/dev.ts`: the local server, on https when `.cert/` exists. It also serves `public/`, which Vercel serves
   from its CDN instead
 - `src/buffer.ts`: everything that talks to Buffer (OAuth, GraphQL). Nothing else calls Buffer
-- `src/auth.ts`: sign in, sign out, `/me`
+- `src/mock.ts`: mock mode's fake people and answers
+- `src/auth.ts`: sign in (also as a fake person in mock mode), sign out, `/me`
 - `src/session.ts`, `src/crypto.ts`: sealed (AES-256-GCM) cookies
 - `src/html.ts`: `page()` and `escapeHtml()`. Escape every value from a person or from Buffer
 - `src/config.ts`: `env()`, read when used so the tests run without a `.env`

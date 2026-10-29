@@ -4,20 +4,12 @@ import { test } from "node:test";
 import { authorizeUrl, createPkce } from "../src/buffer.ts";
 import { seal, unseal } from "../src/crypto.ts";
 import { escapeHtml } from "../src/html.ts";
-import { listen } from "./server.ts";
+import { cookieFrom, listen } from "./server.ts";
 
 process.env.BUFFER_CLIENT_ID = "test-client";
 process.env.BUFFER_CLIENT_SECRET = "test-secret";
 process.env.BUFFER_REDIRECT_URI = "https://localhost:3000/callback";
 process.env.SESSION_SECRET = "a".repeat(32);
-
-function cookieFrom(res: Response, name: string): string {
-  const header = res.headers
-    .getSetCookie()
-    .find((cookie) => cookie.startsWith(`${name}=`));
-  assert.ok(header, `no ${name} cookie`);
-  return header;
-}
 
 test("a sealed value opens only with the same secret and unchanged", () => {
   const sealed = seal({ name: "Lena" }, "secret-one");
@@ -80,6 +72,15 @@ test("a callback with the wrong state is refused", async (t) => {
     headers: { cookie },
   });
   assert.equal(res.status, 403);
+});
+
+test("mock sign-in is off without BUFFER_MOCK", async (t) => {
+  const base = await listen(t);
+  const res = await fetch(`${base}/login/mock`, {
+    method: "POST",
+    body: new URLSearchParams({ person: "mock_aiko" }),
+  });
+  assert.equal(res.status, 404);
 });
 
 test("/me without a session goes back to the start", async (t) => {

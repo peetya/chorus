@@ -1026,3 +1026,25 @@ form.write textarea {
   flex-direction: column;
   gap: 6px;
 }
+
+/* Review before scheduling */
+
+.review {
+  max-width: 44rem;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.review p {
+  margin: 0;
+}
+
+.review-post {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  padding: 20px 24px;
+  font-size: 17px;
+}

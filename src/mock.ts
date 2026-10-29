@@ -115,6 +115,12 @@ export function mockTokens(personId: string): Tokens {
   };
 }
 
+// Posts the mock "scheduled", so a delete can be checked against them. Gone when the server restarts.
+export const scheduled = new Map<
+  string,
+  { id: string; dueAt: string; owner: string }
+>();
+
 // Like Buffer: a refresh token works once.
 const spent = new Set<string>();
 
@@ -155,6 +161,32 @@ export function mockGraphql(
       throw new Error("Buffer API error: FORBIDDEN (mock)");
     }
     return { channels: person.channels };
+  }
+  if (operation === "CreatePost") {
+    const input = variables?.input as {
+      channelId: string;
+      text: string;
+      dueAt: string;
+    };
+    if (!person.channels.some((c) => c.id === input.channelId)) {
+      return { createPost: { message: "Channel not found" } };
+    }
+    if (!input.text.trim())
+      return { createPost: { message: "Text is required" } };
+    const post = {
+      id: `mockpost_${randomBytes(6).toString("hex")}`,
+      dueAt: input.dueAt,
+    };
+    scheduled.set(post.id, { ...post, owner: person.id });
+    return { createPost: { post: { ...post, status: "scheduled" } } };
+  }
+  if (operation === "DeletePost") {
+    const { id } = (variables?.input ?? {}) as { id?: string };
+    if (!id || scheduled.get(id)?.owner !== person.id) {
+      return { deletePost: { message: "Post not found" } };
+    }
+    scheduled.delete(id);
+    return { deletePost: { id } };
   }
   throw new Error(`Mock mode has no answer for ${operation ?? "this query"}`);
 }

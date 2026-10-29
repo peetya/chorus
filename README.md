@@ -10,8 +10,8 @@ Built on the [Buffer API](https://developers.buffer.com). Work in progress, buil
 
 ## Run it locally
 
-You need Node 24 and [mkcert](https://github.com/FiloSottile/mkcert) (Buffer only accepts https redirect
-URIs, localhost too).
+You need Node 24, Docker (for a local MongoDB) and [mkcert](https://github.com/FiloSottile/mkcert) (Buffer
+only accepts https redirect URIs, localhost too).
 
 1. Create an app client at [publish.buffer.com/settings/api](https://publish.buffer.com/settings/api) with
    the redirect URI `https://localhost:3000/callback`
@@ -22,14 +22,15 @@ URIs, localhost too).
 npm install
 mkcert -install    # once per machine
 npm run cert
+npm run db         # MongoDB on localhost:27017, for the app and the tests
 npm run dev        # https://localhost:3000
 npm test
 npm run typecheck
 npm run lint
 ```
 
-No Buffer account? Set `BUFFER_MOCK=1` and `SESSION_SECRET` in `.env` and skip step 1. Sign-in then shows a
-list of fake people in different time zones, and nothing reaches Buffer.
+No Buffer account? Set `BUFFER_MOCK=1` in `.env` and skip step 1 (the app client values can stay empty).
+Sign-in then shows a list of fake people in different time zones, and nothing reaches Buffer.
 
 ## License
 

@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { cookieFrom, listen } from "./server.ts";
+import { cookieFrom, listen, useTestDb } from "./server.ts";
 
 process.env.BUFFER_MOCK = "1";
 process.env.SESSION_SECRET = "a".repeat(32);
+process.env.TOKEN_KEY = "b".repeat(32);
+useTestDb();
 
 function signInAs(base: string, person: string) {
   return fetch(`${base}/login/mock`, {

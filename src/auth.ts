@@ -8,16 +8,18 @@ import {
   exchangeCode,
   graphql,
   isMock,
+  type Tokens,
 } from "./buffer.ts";
 import { escapeHtml, page } from "./html.ts";
-import { PEOPLE } from "./mock.ts";
+import { mockTokens, PEOPLE } from "./mock.ts";
 import { clearSealed, readSealed, writeSealed } from "./session.ts";
+import { saveUser } from "./users.ts";
 
 const OAUTH_COOKIE = "chorus_oauth";
 const SESSION_COOKIE = "chorus_session";
 
 type OAuthState = { verifier: string; state: string };
-export type Session = { accountId: string; name: string };
+export type Session = { userId: string; name: string };
 
 export const auth = Router();
 
@@ -32,15 +34,16 @@ function signInAgain(res: Response, status: number, message: string) {
     );
 }
 
-async function signIn(res: Response, accessToken: string) {
+async function signIn(res: Response, tokens: Tokens) {
   const { account } = await graphql<{ account: Account }>(
-    accessToken,
+    tokens.accessToken,
     ACCOUNT_QUERY,
   );
+  const userId = await saveUser(account, tokens);
   writeSealed(
     res,
     SESSION_COOKIE,
-    { accountId: account.id, name: account.name } satisfies Session,
+    { userId, name: account.name } satisfies Session,
     { maxAgeMs: 30 * 24 * 60 * 60_000 },
   );
   res.redirect("/me");
@@ -95,9 +98,7 @@ auth.get("/callback", async (req, res) => {
     return signInAgain(res, 403, "This sign-in didn't start here.");
   }
 
-  const tokens = await exchangeCode(code, oauth.verifier);
-  // The tokens are dropped for now. The token store will keep them, encrypted.
-  await signIn(res, tokens.accessToken);
+  await signIn(res, await exchangeCode(code, oauth.verifier));
 });
 
 auth.post(
@@ -107,7 +108,7 @@ auth.post(
     if (!isMock()) return res.sendStatus(404);
     const person = PEOPLE.find((p) => p.id === req.body?.person);
     if (!person) return signInAgain(res, 400, "Pick someone from the list.");
-    await signIn(res, person.id);
+    await signIn(res, mockTokens(person.id));
   },
 );
 

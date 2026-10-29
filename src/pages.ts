@@ -14,7 +14,7 @@ function viewer(session: Session) {
 
 pages.get("/me", async (req, res) => {
   const session = readSession(req);
-  if (!session) return res.redirect("/");
+  if (!session) return res.redirect("/login");
   const owned = await listOwned(session.userId);
   res.send(page("My Choruses", myChoruses(owned), { viewer: viewer(session) }));
 });

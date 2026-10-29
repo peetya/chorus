@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { cookieFrom, listen, useTestDb } from "./server.ts";
+import { cookieFrom, listen, mockSession, useTestDb } from "./server.ts";
 
 process.env.BUFFER_MOCK = "1";
 process.env.SESSION_SECRET = "a".repeat(32);
@@ -34,6 +34,16 @@ test("signing in as a fake person opens their page", async (t) => {
   const text = await me.text();
   assert.match(text, /My Choruses/);
   assert.match(text, /Aiko Tanaka \(mock mode\)/);
+});
+
+test("sign in while signed in goes straight to My Choruses", async (t) => {
+  const base = await listen(t);
+  const cookie = await mockSession(base, "mock_ravi");
+  const res = await fetch(`${base}/login`, {
+    headers: { cookie },
+    redirect: "manual",
+  });
+  assert.equal(res.headers.get("location"), "/me");
 });
 
 test("someone not on the list can't sign in", async (t) => {

@@ -49,7 +49,9 @@ async function signIn(res: Response, tokens: Tokens) {
   res.redirect("/me");
 }
 
-auth.get("/login", (_req, res) => {
+auth.get("/login", (req, res) => {
+  // The landing page is static and always says "Sign in", so signed-in people come through here too.
+  if (readSession(req)) return res.redirect("/me");
   if (isMock()) return res.send(page("Sign in", mockSignIn(PEOPLE)));
   const { verifier, challenge } = createPkce();
   const state = randomBytes(16).toString("base64url");

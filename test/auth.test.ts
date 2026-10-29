@@ -82,9 +82,9 @@ test("mock sign-in is off without BUFFER_MOCK", async (t) => {
   assert.equal(res.status, 404);
 });
 
-test("/me without a session goes back to the start", async (t) => {
+test("/me without a session asks to sign in", async (t) => {
   const base = await listen(t);
   const res = await fetch(`${base}/me`, { redirect: "manual" });
   assert.equal(res.status, 302);
-  assert.equal(res.headers.get("location"), "/");
+  assert.equal(res.headers.get("location"), "/login");
 });

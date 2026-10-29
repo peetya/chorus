@@ -1,7 +1,7 @@
 // All calls to Buffer go through this file.
 import { createHash, randomBytes } from "node:crypto";
 import { env } from "./config.ts";
-import { mockGraphql } from "./mock.ts";
+import { mockGraphql, mockRefresh } from "./mock.ts";
 
 const AUTH_URL = "https://auth.buffer.com/auth";
 const TOKEN_URL = "https://auth.buffer.com/token";
@@ -53,21 +53,25 @@ const TOKEN_ERROR_HINTS: Record<string, string> = {
   invalid_scope: "a scope is not enabled on this app client",
 };
 
-export async function exchangeCode(
-  code: string,
-  verifier: string,
-): Promise<Tokens> {
+// code is Buffer's OAuth error code, when it sent one.
+export class TokenError extends Error {
+  code: string | undefined;
+
+  constructor(message: string, code?: string) {
+    super(message);
+    this.code = code;
+  }
+}
+
+async function tokenRequest(params: Record<string, string>): Promise<Tokens> {
   const res = await fetch(TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     // Buffer wants the secret in the body (client_secret_post), not in HTTP Basic auth.
     body: new URLSearchParams({
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: env("BUFFER_REDIRECT_URI"),
+      ...params,
       client_id: env("BUFFER_CLIENT_ID"),
       client_secret: env("BUFFER_CLIENT_SECRET"),
-      code_verifier: verifier,
     }),
   });
   const json = (await res.json().catch(() => ({}))) as TokenResponse;
@@ -75,12 +79,13 @@ export async function exchangeCode(
   if (!res.ok || json.error || !json.access_token) {
     const reason = json.error_description ?? json.error ?? `HTTP ${res.status}`;
     const hint = json.error ? TOKEN_ERROR_HINTS[json.error] : undefined;
-    throw new Error(
-      `Buffer token exchange failed: ${reason}${hint ? ` (${hint})` : ""}`,
+    throw new TokenError(
+      `Buffer token request failed: ${reason}${hint ? ` (${hint})` : ""}`,
+      json.error,
     );
   }
   if (!json.refresh_token) {
-    throw new Error(
+    throw new TokenError(
       "Buffer sent no refresh token: offline_access must be in the requested scopes",
     );
   }
@@ -91,6 +96,24 @@ export async function exchangeCode(
     // A little early, so a token never runs out in the middle of a request.
     expiresAt: Date.now() + (Number(json.expires_in) || 3600) * 1000 - 30_000,
   };
+}
+
+export function exchangeCode(code: string, verifier: string): Promise<Tokens> {
+  return tokenRequest({
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: env("BUFFER_REDIRECT_URI"),
+    code_verifier: verifier,
+  });
+}
+
+// Each refresh gives a new refresh token and the old one stops working. Only getAccessToken calls this.
+export async function refreshTokens(refreshToken: string): Promise<Tokens> {
+  if (isMock()) return mockRefresh(refreshToken);
+  return tokenRequest({
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+  });
 }
 
 type GraphqlResponse<T> = {

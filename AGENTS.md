@@ -24,6 +24,7 @@ after another through one day in one city (a relay). Built on Buffer's public AP
 ```bash
 npm install
 npm run cert         # once: local https certificate with mkcert (Buffer needs https)
+npm run db           # MongoDB in Docker on localhost:27017; the tests need it too
 npm run dev          # local server on https://localhost:3000
 npm test             # node --test
 npm run typecheck    # tsc, no emit
@@ -42,11 +43,12 @@ comes with the wave.
 - `src/dev.ts`: the local server, on https when `.cert/` exists. It also serves `public/`, which Vercel serves
   from its CDN instead
 - `src/buffer.ts`: everything that talks to Buffer (OAuth, GraphQL). Nothing else calls Buffer
-- `src/mock.ts`: mock mode's fake people and answers
+- `src/mock.ts`: mock mode's fake people, answers and tokens
+- `src/db.ts`: the one `MongoClient`. `src/users.ts`: users, their encrypted tokens, `getAccessToken()`
 - `src/auth.ts`: sign in (also as a fake person in mock mode), sign out, `/me`
 - `src/session.ts`, `src/crypto.ts`: sealed (AES-256-GCM) cookies
 - `src/html.ts`: `page()` and `escapeHtml()`. Escape every value from a person or from Buffer
-- `src/config.ts`: `env()`, read when used so the tests run without a `.env`
+- `src/config.ts`: `env()` and `secretEnv()`, read when used so the tests run without a `.env`
 - `public/`: static files
 - `test/`: `node --test` tests, named `*.test.ts`. `test/server.ts` starts the app on a free port
 

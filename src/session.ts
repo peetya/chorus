@@ -1,15 +1,9 @@
 import type { Request, Response } from "express";
-import { env } from "./config.ts";
+import { secretEnv } from "./config.ts";
 import { seal, unseal } from "./crypto.ts";
 
 function secret(): string {
-  const value = env("SESSION_SECRET");
-  if (value.length < 32) {
-    throw new Error(
-      "SESSION_SECRET needs at least 32 characters: openssl rand -hex 32",
-    );
-  }
-  return value;
+  return secretEnv("SESSION_SECRET");
 }
 
 function readCookie(req: Request, name: string): string | undefined {

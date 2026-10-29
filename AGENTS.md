@@ -47,14 +47,18 @@ comes with the wave.
 - `src/db.ts`: the one `MongoClient`. `src/users.ts`: users, their encrypted tokens, `getAccessToken()`
 - `src/auth.ts`: sign in (also as a fake person in mock mode), sign out, `readSession()`
 - `src/choruses.ts`: the `choruses` collection, and reading and checking the "Start a Chorus" form
-- `src/pages.ts`: the routes for My Choruses (`/me`) and Start a Chorus (`/new`)
+- `src/posts.ts`: the `posts` collection (one per person in a Chorus), joining, and which channels can't post
+- `src/pages.ts`: the routes for My Choruses (`/me`), Start a Chorus (`/new`), the Chorus page (`/c/:id`)
+  and joining it (`/c/:id/join`)
 - `src/session.ts`, `src/crypto.ts`: sealed (AES-256-GCM) cookies
 - `src/html.ts`: `page()` (with the header), and the `html` tagged template that escapes every value
-- `src/views/`: the markup of each screen, as functions that return `html`. Routes stay in `pages.ts` and
+- `src/views/`: the markup of each screen, as functions that return `html`. `labels.ts` has the small
+  formatters (short names like "Péter H.", network names, days). Routes stay in `pages.ts` and
   `auth.ts` and hold no markup
 - `src/config.ts`: `env()` and `secretEnv()`, read when used so the tests run without a `.env`
 - `public/`: static files: the landing page, `style.css` (the design's colors and fonts), the logo, and
-  `brief.js` (list rows and the live fact card on the form). Pages work without JS where they can
+  `brief.js` (list rows and the live fact card on the form), `copy.js` (the invite link's copy button).
+  Pages work without JS where they can
 - `test/`: `node --test` tests, named `*.test.ts`. `test/server.ts` starts the app on a free port
 
 Imports use the `.ts` extension (`import app from "./app.ts"`), because Node runs the files as they are.

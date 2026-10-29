@@ -614,3 +614,266 @@ input.mono {
   border-radius: 10px;
   background: #fff;
 }
+
+/* The Chorus page: the invite */
+
+.invite {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 48px;
+  align-items: flex-start;
+}
+
+.invite-main {
+  flex: 1 1 560px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.invite-head {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.invite-head p {
+  margin: 0;
+}
+
+.invite-head h1 {
+  font-size: clamp(2rem, 6vw, 3rem);
+  line-height: 1.04;
+  text-wrap: balance;
+}
+
+.pill.accent {
+  font-size: 14px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  padding: 6px 14px;
+}
+
+.note {
+  margin: 0;
+  background: var(--soft);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.note blockquote {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.brief-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.brief-side {
+  flex: 1 1 240px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.box {
+  min-width: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-wrap: anywhere;
+}
+
+.brief-cards > .box {
+  flex: 1 1 300px;
+}
+
+.box h2,
+.your-part h2 {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.box ul,
+.your-part ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.your-part {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.your-part p {
+  margin: 0;
+}
+
+.joined-people {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatars {
+  display: flex;
+}
+
+.avatars span {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #e7eaf0;
+  border: 2px solid #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.avatars span + span {
+  margin-left: -8px;
+}
+
+.join-box {
+  flex: 1 1 340px;
+  min-width: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: 20px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.join-box p {
+  margin: 0;
+}
+
+.button.big {
+  min-height: 52px;
+  border-radius: 12px;
+}
+
+.center {
+  text-align: center;
+}
+
+.invite-link {
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.invite-link label {
+  font-weight: 600;
+}
+
+.invite-link input {
+  flex: 1 1 320px;
+  min-width: 0;
+  background: var(--soft);
+}
+
+/* Picking a channel */
+
+.channels {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 40rem;
+}
+
+.channels fieldset {
+  gap: 12px;
+}
+
+.channel {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.channel:has(input:checked) {
+  border: 2px solid var(--ink);
+  padding: 13px 15px;
+}
+
+.channel input {
+  width: 18px;
+  height: 18px;
+  margin: 3px 0 0;
+  accent-color: var(--accent);
+  flex: none;
+}
+
+.channel.blocked {
+  cursor: not-allowed;
+  background: var(--soft);
+  border-color: var(--line-soft);
+}
+
+.channel-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.channel-name {
+  font-weight: 600;
+}
+
+.channel-problem {
+  font-size: 14px;
+  color: var(--accent-ink);
+}
+
+a.chorus-card {
+  text-decoration: none;
+}
+
+a.chorus-card:hover {
+  border-color: var(--line);
+  color: inherit;
+}

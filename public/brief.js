@@ -91,6 +91,13 @@ function updateCard() {
   );
 }
 
+// The hint under the time says when the posts go out, so it follows the time picked.
+function updateTimeHint() {
+  const time = form.elements.localTime.value;
+  if (time) document.querySelector("[data-time-hint]").textContent = time;
+}
+
 form.addEventListener("input", updateCard);
+form.addEventListener("input", updateTimeHint);
 form.querySelectorAll("[data-list]").forEach(renumber);
 updateCard();

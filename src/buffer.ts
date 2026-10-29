@@ -135,7 +135,7 @@ export async function graphql<T>(
   query: string,
   variables?: Record<string, unknown>,
 ): Promise<T> {
-  if (isMock()) return mockGraphql(accessToken, query) as T;
+  if (isMock()) return mockGraphql(accessToken, query, variables) as T;
   const res = await fetch(API_URL, {
     method: "POST",
     headers: {
@@ -157,6 +157,44 @@ export async function graphql<T>(
   return json.data;
 }
 
-export const ACCOUNT_QUERY = "query Account { account { id name } }";
+export const ACCOUNT_QUERY =
+  "query Account { account { id name organizations { id } } }";
 
-export type Account = { id: string; name: string };
+export type Account = {
+  id: string;
+  name: string;
+  organizations: { id: string }[];
+};
+
+// Organization has no channels field, so channels are a query of their own, one per organization.
+const CHANNELS_QUERY = `query Channels($input: ChannelsInput!) {
+  channels(input: $input) { id name service timezone isQueuePaused isLocked isDisconnected }
+}`;
+
+export type Channel = {
+  id: string;
+  name: string;
+  service: string;
+  timezone: string; // Buffer's default is Europe/London when the person never set one
+  isQueuePaused: boolean;
+  isLocked: boolean;
+  isDisconnected: boolean;
+};
+
+// The caller passes a token from getAccessToken, like for every other call.
+export async function getChannels(
+  accessToken: string,
+  organizationIds: string[],
+): Promise<Channel[]> {
+  const lists = await Promise.all(
+    organizationIds.map(async (organizationId) => {
+      const { channels } = await graphql<{ channels: Channel[] }>(
+        accessToken,
+        CHANNELS_QUERY,
+        { input: { organizationId } },
+      );
+      return channels;
+    }),
+  );
+  return lists.flat();
+}

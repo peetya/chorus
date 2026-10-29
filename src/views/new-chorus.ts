@@ -113,7 +113,7 @@ ${tones}
 <input id="localTime" name="localTime" type="time" required value="${input.localTime ?? "09:00"}">
 </div>
 </div>
-<span class="hint">At the same local time everywhere: <span class="mono">09:00</span> in Tokyo, then in Budapest, then in San Francisco. Posts in one time zone go out a few minutes apart, so they don't all land in the same minute.</span>
+<span class="hint">At the same local time everywhere: <span class="mono" data-time-hint>${input.localTime ?? "09:00"}</span> in Tokyo, then in Budapest, then in San Francisco. Posts in one time zone go out a few minutes apart, so they don't all land in the same minute.</span>
 </div>
 
 <div class="actions">

@@ -19,7 +19,14 @@ import { mockSignIn, signInProblem } from "./views/sign-in.ts";
 const OAUTH_COOKIE = "chorus_oauth";
 const SESSION_COOKIE = "chorus_session";
 
-type OAuthState = { verifier: string; state: string };
+type OAuthState = { verifier: string; state: string; next: string };
+
+// Where to go after sign-in. Only our own Chorus pages, so a link can't send people to another site.
+export function safeNext(next: unknown): string {
+  return typeof next === "string" && /^\/c\/[\w-]{1,20}(\/join)?$/.test(next)
+    ? next
+    : "/me";
+}
 export type Session = { userId: string; name: string };
 
 export const auth = Router();
@@ -34,7 +41,7 @@ function signInAgain(res: Response, status: number, message: string) {
   res.status(status).send(page("Sign in", signInProblem(message)));
 }
 
-async function signIn(res: Response, tokens: Tokens) {
+async function signIn(res: Response, tokens: Tokens, next: string) {
   const { account } = await graphql<{ account: Account }>(
     tokens.accessToken,
     ACCOUNT_QUERY,
@@ -46,20 +53,21 @@ async function signIn(res: Response, tokens: Tokens) {
     { userId, name: account.name } satisfies Session,
     { maxAgeMs: 30 * 24 * 60 * 60_000 },
   );
-  res.redirect("/me");
+  res.redirect(next);
 }
 
 auth.get("/login", (req, res) => {
+  const next = safeNext(req.query.next);
   // The landing page is static and always says "Sign in", so signed-in people come through here too.
-  if (readSession(req)) return res.redirect("/me");
-  if (isMock()) return res.send(page("Sign in", mockSignIn(PEOPLE)));
+  if (readSession(req)) return res.redirect(next);
+  if (isMock()) return res.send(page("Sign in", mockSignIn(PEOPLE, next)));
   const { verifier, challenge } = createPkce();
   const state = randomBytes(16).toString("base64url");
   // The verifier stays with us until the token exchange; Buffer only ever sees its hash.
   writeSealed(
     res,
     OAUTH_COOKIE,
-    { verifier, state },
+    { verifier, state, next } satisfies OAuthState,
     { maxAgeMs: 10 * 60_000, path: "/callback" },
   );
   res.redirect(authorizeUrl(state, challenge));
@@ -86,7 +94,11 @@ auth.get("/callback", async (req, res) => {
     return signInAgain(res, 403, "This sign-in didn't start here.");
   }
 
-  await signIn(res, await exchangeCode(code, oauth.verifier));
+  await signIn(
+    res,
+    await exchangeCode(code, oauth.verifier),
+    safeNext(oauth.next),
+  );
 });
 
 auth.post(
@@ -96,7 +108,7 @@ auth.post(
     if (!isMock()) return res.sendStatus(404);
     const person = PEOPLE.find((p) => p.id === req.body?.person);
     if (!person) return signInAgain(res, 400, "Pick someone from the list.");
-    await signIn(res, mockTokens(person.id));
+    await signIn(res, mockTokens(person.id), safeNext(req.body?.next));
   },
 );
 

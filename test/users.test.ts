@@ -14,7 +14,10 @@ function expired(personId: string) {
 
 test("tokens are stored encrypted", async () => {
   const tokens = mockTokens("mock_aiko");
-  const userId = await saveUser({ id: "mock_aiko", name: "Aiko" }, tokens);
+  const userId = await saveUser(
+    { id: "mock_aiko", name: "Aiko", organizations: [] },
+    tokens,
+  );
 
   const raw = JSON.stringify(await (await users()).findOne({ _id: userId }));
   assert.ok(!raw.includes(tokens.refreshToken));
@@ -22,7 +25,7 @@ test("tokens are stored encrypted", async () => {
 });
 
 test("signing in again keeps the same user", async () => {
-  const account = { id: "mock_sam", name: "Sam" };
+  const account = { id: "mock_sam", name: "Sam", organizations: [] };
   const first = await saveUser(account, mockTokens("mock_sam"));
   const second = await saveUser(account, mockTokens("mock_sam"));
   assert.equal(first, second);
@@ -31,7 +34,7 @@ test("signing in again keeps the same user", async () => {
 // The mock refuses a refresh token used twice, so a second refresh would fail this test.
 test("eight requests with an expired token refresh it once", async () => {
   const userId = await saveUser(
-    { id: "mock_ravi", name: "Ravi" },
+    { id: "mock_ravi", name: "Ravi", organizations: [] },
     expired("mock_ravi"),
   );
 
@@ -48,7 +51,10 @@ test("eight requests with an expired token refresh it once", async () => {
 test("a refused refresh token means signing in again", async () => {
   const tokens = expired("mock_dana");
   mockRefresh(tokens.refreshToken);
-  const userId = await saveUser({ id: "mock_dana", name: "Dana" }, tokens);
+  const userId = await saveUser(
+    { id: "mock_dana", name: "Dana", organizations: [] },
+    tokens,
+  );
 
   await assert.rejects(getAccessToken(userId), /used twice/);
   await assert.rejects(getAccessToken(userId), /sign in again/);

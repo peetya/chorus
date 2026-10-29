@@ -1,16 +1,110 @@
 // Mock mode (BUFFER_MOCK=1): fake people and fake Buffer answers, so Chorus runs without a Buffer account.
 // The answers have the same shape as Buffer's. Each new Buffer call adds its answer here.
 import { randomBytes } from "node:crypto";
-import { type Account, TokenError, type Tokens } from "./buffer.ts";
+import {
+  type Account,
+  type Channel,
+  TokenError,
+  type Tokens,
+} from "./buffer.ts";
+
+function channel(
+  id: string,
+  name: string,
+  service: string,
+  timezone: string,
+  problem?: "isQueuePaused" | "isLocked" | "isDisconnected",
+): Channel {
+  return {
+    id,
+    name,
+    service,
+    timezone,
+    isQueuePaused: problem === "isQueuePaused",
+    isLocked: problem === "isLocked",
+    isDisconnected: problem === "isDisconnected",
+  };
+}
 
 // A spread of time zones, so a wave can be tried around the world. The id is also the access token.
+// Three channels can't be used (paused, locked, disconnected), so those cases can be tried too.
 export const PEOPLE = [
-  { id: "mock_aiko", name: "Aiko Tanaka", city: "Tokyo" },
-  { id: "mock_ravi", name: "Ravi Kumar", city: "Bengaluru" },
-  { id: "mock_zsofia", name: "Zsófia Kiss", city: "Budapest" },
-  { id: "mock_sam", name: "Sam Walker", city: "London" },
-  { id: "mock_dana", name: "Dana Rossi", city: "New York" },
-  { id: "mock_maya", name: "Maya Lee", city: "San Francisco" },
+  {
+    id: "mock_aiko",
+    name: "Aiko Tanaka",
+    city: "Tokyo",
+    channels: [channel("ch_aiko_li", "Aiko Tanaka", "linkedin", "Asia/Tokyo")],
+  },
+  {
+    id: "mock_ravi",
+    name: "Ravi Kumar",
+    city: "Bengaluru",
+    channels: [
+      channel("ch_ravi_x", "ravi_builds", "twitter", "Asia/Kolkata"),
+      channel(
+        "ch_ravi_bsky",
+        "ravi.bsky.social",
+        "bluesky",
+        "Asia/Kolkata",
+        "isQueuePaused",
+      ),
+    ],
+  },
+  {
+    id: "mock_zsofia",
+    name: "Zsófia Kiss",
+    city: "Budapest",
+    channels: [
+      channel("ch_zsofia_li", "Zsófia Kiss", "linkedin", "Europe/Budapest"),
+      channel(
+        "ch_zsofia_bsky",
+        "zsofi.bsky.social",
+        "bluesky",
+        "Europe/Budapest",
+      ),
+    ],
+  },
+  {
+    id: "mock_sam",
+    name: "Sam Walker",
+    city: "London",
+    channels: [channel("ch_sam_li", "Sam Walker", "linkedin", "Europe/London")],
+  },
+  {
+    id: "mock_dana",
+    name: "Dana Rossi",
+    city: "New York",
+    channels: [
+      channel("ch_dana_li", "Dana Rossi", "linkedin", "America/New_York"),
+      channel(
+        "ch_dana_x",
+        "danarossi",
+        "twitter",
+        "America/New_York",
+        "isDisconnected",
+      ),
+    ],
+  },
+  {
+    id: "mock_maya",
+    name: "Maya Lee",
+    city: "San Francisco",
+    channels: [
+      channel(
+        "ch_maya_bsky",
+        "mayalee.bsky.social",
+        "bluesky",
+        "America/Los_Angeles",
+      ),
+      channel(
+        "ch_maya_threads",
+        "maya.lee",
+        "threads",
+        "America/Los_Angeles",
+        "isLocked",
+      ),
+    ],
+  },
 ];
 
 export function mockTokens(personId: string): Tokens {
@@ -35,13 +129,32 @@ export function mockRefresh(refreshToken: string): Tokens {
   return mockTokens(refreshToken.split(".")[0]);
 }
 
-export function mockGraphql(accessToken: string, query: string): unknown {
+export function mockGraphql(
+  accessToken: string,
+  query: string,
+  variables?: Record<string, unknown>,
+): unknown {
   const person = PEOPLE.find((p) => p.id === accessToken);
   if (!person) throw new Error("Buffer API error: UNAUTHORIZED (mock)");
 
   const operation = /^(?:query|mutation) (\w+)/.exec(query)?.[1];
+  // One organization per person, named after them, like a new Buffer account.
+  const organizationId = `org_${person.id}`;
   if (operation === "Account") {
-    return { account: { id: person.id, name: person.name } satisfies Account };
+    return {
+      account: {
+        id: person.id,
+        name: person.name,
+        organizations: [{ id: organizationId }],
+      } satisfies Account,
+    };
+  }
+  if (operation === "Channels") {
+    const input = variables?.input as { organizationId?: string } | undefined;
+    if (input?.organizationId !== organizationId) {
+      throw new Error("Buffer API error: FORBIDDEN (mock)");
+    }
+    return { channels: person.channels };
   }
   throw new Error(`Mock mode has no answer for ${operation ?? "this query"}`);
 }

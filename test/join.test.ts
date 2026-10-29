@@ -99,7 +99,7 @@ test("joining twice keeps one post and changes the channel", async (t) => {
   const first = await post(base, `${path}/join`, cookie, [
     ["channelId", "ch_dana_li"],
   ]);
-  assert.equal(first.headers.get("location"), path);
+  assert.equal(first.headers.get("location"), `${path}/post`);
 
   const page = await (
     await fetch(`${base}${path}`, { headers: { cookie } })

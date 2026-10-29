@@ -73,7 +73,7 @@ test("a new Chorus shows up in My Choruses, and only there", async (t) => {
     redirect: "manual",
   });
   assert.equal(created.status, 303);
-  assert.equal(created.headers.get("location"), "/me");
+  assert.match(created.headers.get("location") ?? "", /^\/c\/[\w-]{8}$/);
 
   const mine = await fetch(`${base}/me`, { headers: { cookie } });
   assert.match(await mine.text(), /Northwind ships Tally 2\.0/);

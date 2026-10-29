@@ -158,3 +158,11 @@ export async function createChorus(
 export async function listOwned(ownerId: string): Promise<Chorus[]> {
   return (await choruses()).find({ ownerId }).sort({ day: 1 }).toArray();
 }
+
+export async function getChorus(id: string): Promise<Chorus | null> {
+  return (await choruses()).findOne({ _id: id });
+}
+
+export async function chorusesById(ids: string[]): Promise<Chorus[]> {
+  return (await choruses()).find({ _id: { $in: ids } }).toArray();
+}

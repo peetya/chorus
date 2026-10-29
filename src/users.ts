@@ -15,6 +15,7 @@ export type User = {
   provider: "buffer";
   providerAccountId: string;
   name: string;
+  organizationIds?: string[]; // from the account at sign-in, so listing channels takes one call less
   tokenEnc?: string; // access and refresh token, sealed with TOKEN_KEY
   tokenExpiresAt?: Date;
   refreshingUntil?: Date; // the lease while one request refreshes the token
@@ -51,7 +52,11 @@ export async function saveUser(
   const user = await (await users()).findOneAndUpdate(
     { provider: "buffer", providerAccountId: account.id },
     {
-      $set: { name: account.name, ...sealTokens(tokens) },
+      $set: {
+        name: account.name,
+        organizationIds: account.organizations.map((org) => org.id),
+        ...sealTokens(tokens),
+      },
       $unset: { refreshingUntil: "" },
       $setOnInsert: { _id: randomUUID() },
     },
@@ -59,6 +64,18 @@ export async function saveUser(
   );
   if (!user) throw new Error("The user wasn't saved");
   return user._id;
+}
+
+export async function getUser(userId: string): Promise<User | null> {
+  return (await users()).findOne({ _id: userId });
+}
+
+// Names only, for showing who organizes or joined. Never the tokens.
+export async function namesOf(userIds: string[]): Promise<Map<string, string>> {
+  const found = await (await users())
+    .find({ _id: { $in: userIds } }, { projection: { name: 1 } })
+    .toArray();
+  return new Map(found.map((user) => [user._id, user.name]));
 }
 
 // Every Buffer call gets its token here. Buffer's refresh tokens work once, and a reused one revokes the

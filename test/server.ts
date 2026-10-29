@@ -32,3 +32,13 @@ export function useTestDb() {
     await closeDb();
   });
 }
+
+// Signs in as one of mock mode's fake people and returns the session cookie to send.
+export async function mockSession(base: string, person: string) {
+  const res = await fetch(`${base}/login/mock`, {
+    method: "POST",
+    body: new URLSearchParams({ person }),
+    redirect: "manual",
+  });
+  return cookieFrom(res, "chorus_session").split(";")[0];
+}

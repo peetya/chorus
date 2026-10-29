@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import express, { type Response, Router } from "express";
+import express, { type Request, type Response, Router } from "express";
 import {
   ACCOUNT_QUERY,
   type Account,
@@ -22,6 +22,12 @@ type OAuthState = { verifier: string; state: string };
 export type Session = { userId: string; name: string };
 
 export const auth = Router();
+
+// Cookies from before the token store hold no userId; those people sign in again.
+export function readSession(req: Request): Session | null {
+  const session = readSealed<Session>(req, SESSION_COOKIE);
+  return session?.userId ? session : null;
+}
 
 function signInAgain(res: Response, status: number, message: string) {
   res
@@ -57,7 +63,7 @@ function mockSignInPage(): string {
   return `<h1>Sign in as</h1>
 <p>Mock mode: these people are fake, and nothing reaches Buffer.</p>
 <form method="post" action="/login/mock">
-<ul>
+<ul class="people">
 ${people}
 </ul>
 </form>`;
@@ -115,17 +121,4 @@ auth.post(
 auth.post("/logout", (_req, res) => {
   clearSealed(res, SESSION_COOKIE);
   res.redirect(303, "/");
-});
-
-auth.get("/me", (req, res) => {
-  const session = readSealed<Session>(req, SESSION_COOKIE);
-  if (!session) return res.redirect("/");
-  res.send(
-    page(
-      "Chorus",
-      `<h1>Hi ${escapeHtml(session.name)}</h1>
-<p>${isMock() ? "You're signed in as a fake person (mock mode)." : "You're signed in with Buffer."}</p>
-<form method="post" action="/logout"><button type="submit">Sign out</button></form>`,
-    ),
-  );
 });

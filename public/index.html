@@ -5,12 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Chorus</title>
   <meta name="description" content="Announce news together. Everyone writes their own post, and it goes out from their own Buffer account.">
+  <link rel="icon" href="/logo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+  <header class="top">
+    <div>
+      <a href="/" class="brand"><img src="/logo.svg" alt="" width="24" height="24"><span>chorus</span></a>
+      <nav>
+        <a href="/me">My Choruses</a>
+      </nav>
+    </div>
+  </header>
   <main>
-    <h1>Chorus</h1>
-    <p><a href="/login">Sign in with Buffer</a></p>
+    <div class="hero">
+      <h1>Announce news together</h1>
+      <p>Everyone writes their own post, in their own words, and it goes out from their own Buffer account at the same local time: 9:00 in Tokyo, then in Budapest, then in San Francisco.</p>
+      <a href="/new" class="button primary">Start a Chorus</a>
+    </div>
   </main>
 </body>
 </html>

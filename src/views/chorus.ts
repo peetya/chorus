@@ -1,6 +1,7 @@
 import type { Chorus } from "../choruses.ts";
 import { type Html, html } from "../html.ts";
-import type { Post } from "../posts.ts";
+import { type Post, WITHDRAW_BEFORE_MS } from "../posts.ts";
+import { localDay, localTime } from "../time.ts";
 import { initials, place, serviceName, shortName, showDay } from "./labels.ts";
 
 export type ChorusView = {
@@ -15,6 +16,21 @@ export type ChorusView = {
 
 function joinBox({ chorus, post, over, isOrganizer }: ChorusView): Html {
   const when = html`${showDay(chorus.day)}, at ${chorus.localTime}`;
+  if (post?.status === "scheduled" && post.dueAt) {
+    const zone = post.channelTz;
+    const canWithdraw = post.dueAt.getTime() > Date.now() + WITHDRAW_BEFORE_MS;
+    return html`<p class="pill accent">Scheduled</p>
+<p class="joined">Your post goes out on <strong>${localDay(post.dueAt, zone)} at ${localTime(post.dueAt, zone)}</strong> ${place(zone)} time, from ${post.channelName} (${serviceName(post.channelService)}).</p>
+${
+  canWithdraw
+    ? html`<form method="post" action="/c/${chorus._id}/post/withdraw"><button type="submit" class="button">Withdraw to change it</button></form>
+<p class="muted small">Withdrawing takes it out of your Buffer queue and keeps your text as a draft.</p>`
+    : html`<p class="muted small">It goes out in a few minutes, so it can't be changed now.</p>`
+}`;
+  }
+  if (post?.status === "scheduling" || post?.status === "withdrawing") {
+    return html`<p>Talking to Buffer. Reload in a moment.</p>`;
+  }
   if (over) return html`<p>This Chorus is over. Joining is closed.</p>`;
   if (post) {
     return html`<p class="joined">You're in. Your post goes out from <strong>${post.channelName}</strong> (${serviceName(post.channelService)}) on ${when} ${place(post.channelTz)} time.</p>

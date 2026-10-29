@@ -50,8 +50,11 @@ comes with the wave.
 - `src/posts.ts`: the `posts` collection (one per person in a Chorus), joining, and which channels can't post
 - `src/checks.ts`: the free checks on a post (length the way each network counts it, the main hashtag,
   the hashtag limit, "Please avoid", and facts that aren't on the fact card). Only "too long" blocks
+- `src/time.ts`: local time in a zone to UTC and back (DST-safe, `Intl` only), and when a wave post goes out
 - `src/pages.ts`: the routes for My Choruses (`/me`), Start a Chorus (`/new`), the Chorus page (`/c/:id`),
-  joining it (`/c/:id/join`) and writing your post (`/c/:id/post`)
+  joining it (`/c/:id/join`), writing your post (`/c/:id/post`), and approving or withdrawing it
+- A post moves drafting, scheduling, scheduled (and withdrawing, back to drafting) with one atomic
+  `findOneAndUpdate` per step in `src/posts.ts`, so a double click can't create two Buffer posts
 - `src/session.ts`, `src/crypto.ts`: sealed (AES-256-GCM) cookies
 - `src/html.ts`: `page()` (with the header), and the `html` tagged template that escapes every value
 - `src/views/`: the markup of each screen, as functions that return `html`. `labels.ts` has the small

@@ -50,6 +50,7 @@ export function writePage(
   <a href="/c/${chorus._id}" class="back">${chorus.title}</a>
   <h1>Your post</h1>
 </div>
+${post.lastError && html`<div class="errors" role="alert"><p>Buffer didn't schedule it: ${post.lastError}</p></div>`}
 <div class="layout write-layout">
 <form method="post" action="/c/${chorus._id}/post" class="brief write" data-write data-check="/c/${chorus._id}/post/check">
   <div class="post-to">
@@ -65,7 +66,8 @@ ${checkList(result)}
     </div>
   </div>
   <div class="actions inline">
-    <button type="submit" class="button primary">Save draft</button>
+    <button type="submit" class="button primary" name="action" value="approve">Approve and schedule</button>
+    <button type="submit" class="button">Save draft</button>
     ${saved && html`<span class="muted" role="status">Saved.</span>`}
   </div>
 </form>

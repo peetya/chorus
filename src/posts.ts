@@ -13,7 +13,19 @@ export type Post = {
   channelTz: string;
   text?: string; // the person's own words; only they see it until it's posted
   savedAt?: Date;
-  status: "drafting" | "scheduled" | "sent" | "failed" | "withdrawn";
+  // "scheduling" and "withdrawing" hold the post while Buffer is asked, so a double click can't
+  // create two Buffer posts or delete one twice.
+  status:
+    | "drafting"
+    | "scheduling"
+    | "scheduled"
+    | "withdrawing"
+    | "sent"
+    | "failed";
+  lockedAt?: Date;
+  bufferPostId?: string;
+  dueAt?: Date;
+  lastError?: string; // Buffer's reason when it refused the post, shown in the editor
   tzConfirmed: boolean; // Buffer's time zone defaults to Europe/London, so people confirm theirs
   aiShaped: boolean;
   statusChecks: number;
@@ -95,4 +107,82 @@ export function channelProblem(channel: Channel): string | null {
     return "The queue of this channel is paused in Buffer. Unpause it first.";
   }
   return null;
+}
+
+// A lock older than this belongs to a request that died; the next one may take over.
+const LOCK_MS = 2 * 60_000;
+export const WITHDRAW_BEFORE_MS = 5 * 60_000;
+
+export async function claimForScheduling(
+  chorusId: string,
+  userId: string,
+): Promise<Post | null> {
+  const now = new Date();
+  return (await posts()).findOneAndUpdate(
+    {
+      chorusId,
+      userId,
+      $or: [
+        { status: "drafting" },
+        {
+          status: "scheduling",
+          lockedAt: { $lt: new Date(now.getTime() - LOCK_MS) },
+        },
+      ],
+    },
+    {
+      $set: { status: "scheduling", lockedAt: now },
+      $unset: { lastError: "" },
+    },
+    { returnDocument: "after" },
+  );
+}
+
+export async function markScheduled(
+  id: string,
+  bufferPostId: string,
+  dueAt: Date,
+) {
+  await (await posts()).updateOne(
+    { _id: id },
+    {
+      $set: { status: "scheduled", bufferPostId, dueAt },
+      $unset: { lockedAt: "" },
+    },
+  );
+}
+
+// Back to an editable draft: after Buffer refused it, or after it was withdrawn.
+export async function backToDraft(id: string, lastError?: string) {
+  await (await posts()).updateOne(
+    { _id: id },
+    {
+      $set: { status: "drafting", ...(lastError && { lastError }) },
+      $unset: { lockedAt: "", bufferPostId: "", dueAt: "" },
+    },
+  );
+}
+
+// Only well before it goes out: deleting it at the last minute could remove a live post.
+export async function claimForWithdraw(
+  chorusId: string,
+  userId: string,
+): Promise<Post | null> {
+  return (await posts()).findOneAndUpdate(
+    {
+      chorusId,
+      userId,
+      status: "scheduled",
+      dueAt: { $gt: new Date(Date.now() + WITHDRAW_BEFORE_MS) },
+    },
+    { $set: { status: "withdrawing", lockedAt: new Date() } },
+    { returnDocument: "after" },
+  );
+}
+
+export async function stillScheduled(id: string) {
+  await (await posts()).updateOne(
+    { _id: id },
+    { $set: { status: "scheduled" }, $unset: { lockedAt: "" } },
+  );
 }

@@ -198,3 +198,86 @@ export async function getChannels(
   );
   return lists.flat();
 }
+
+const CREATE_POST = `mutation CreatePost($input: CreatePostInput!) {
+  createPost(input: $input) {
+    ... on PostActionSuccess { post { id dueAt status } }
+    ... on MutationError { message }
+  }
+}`;
+
+const DELETE_POST = `mutation DeletePost($input: DeletePostInput!) {
+  deletePost(input: $input) {
+    ... on DeletePostSuccess { id }
+    ... on MutationError { message }
+  }
+}`;
+
+// Some networks refuse a post without their own metadata. Google Business goes under "google".
+function metadataFor(
+  service: string,
+  text: string,
+): Record<string, unknown> | undefined {
+  switch (service) {
+    case "instagram":
+      return { instagram: { type: "post", shouldShareToFeed: true } };
+    case "facebook":
+      return { facebook: { type: "post" } };
+    case "googlebusiness":
+      return { google: { type: "whats_new" } };
+    case "youtube":
+      return { youtube: { title: text.split("\n")[0].slice(0, 100) } };
+    default:
+      return undefined;
+  }
+}
+
+export type Scheduled =
+  | { ok: true; id: string; dueAt: string }
+  | { ok: false; message: string };
+
+// Errors about the post itself come back as data, not as GraphQL errors, so they are a result here.
+export async function createPost(
+  accessToken: string,
+  post: {
+    channelId: string;
+    service: string;
+    text: string;
+    dueAt: Date;
+    aiAssisted: boolean;
+  },
+): Promise<Scheduled> {
+  const { createPost: result } = await graphql<{
+    createPost: { post?: { id: string; dueAt: string }; message?: string };
+  }>(accessToken, CREATE_POST, {
+    input: {
+      channelId: post.channelId,
+      text: post.text,
+      schedulingType: "automatic",
+      mode: "customScheduled",
+      dueAt: post.dueAt.toISOString(),
+      assets: [],
+      needsApproval: false,
+      aiAssisted: post.aiAssisted,
+      metadata: metadataFor(post.service, post.text),
+    },
+  });
+  return result.post
+    ? { ok: true, id: result.post.id, dueAt: result.post.dueAt }
+    : {
+        ok: false,
+        message: result.message ?? "Buffer didn't schedule the post.",
+      };
+}
+
+export async function deletePost(
+  accessToken: string,
+  id: string,
+): Promise<string | null> {
+  const { deletePost: result } = await graphql<{
+    deletePost: { id?: string; message?: string };
+  }>(accessToken, DELETE_POST, { input: { id } });
+  return result.id
+    ? null
+    : (result.message ?? "Buffer didn't delete the post.");
+}

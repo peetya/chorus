@@ -32,8 +32,8 @@ test("signing in as a fake person opens their page", async (t) => {
   const cookie = cookieFrom(login, "chorus_session").split(";")[0];
   const me = await fetch(`${base}/me`, { headers: { cookie } });
   const text = await me.text();
-  assert.match(text, /Hi Aiko Tanaka/);
-  assert.match(text, /mock mode/);
+  assert.match(text, /My Choruses/);
+  assert.match(text, /Aiko Tanaka \(mock mode\)/);
 });
 
 test("someone not on the list can't sign in", async (t) => {

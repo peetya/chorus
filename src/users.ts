@@ -8,7 +8,7 @@ import {
 } from "./buffer.ts";
 import { secretEnv } from "./config.ts";
 import { seal, unseal } from "./crypto.ts";
-import { db } from "./db.ts";
+import { collection } from "./db.ts";
 
 export type User = {
   _id: string; // our own id, so other collections don't depend on Buffer's
@@ -26,18 +26,10 @@ const LEASE_MS = 30_000;
 const WAIT_MS = 500;
 const WAIT_TRIES = 20;
 
-let indexes: Promise<unknown> | undefined;
-
-export async function users() {
-  const collection = db().collection<User>("users");
-  indexes ??= collection
-    .createIndex({ provider: 1, providerAccountId: 1 }, { unique: true })
-    .catch((err) => {
-      indexes = undefined;
-      throw err;
-    });
-  await indexes;
-  return collection;
+export function users() {
+  return collection<User>("users", [
+    { key: { provider: 1, providerAccountId: 1 }, unique: true },
+  ]);
 }
 
 function sealTokens(tokens: Tokens) {
@@ -72,9 +64,9 @@ export async function saveUser(
 // Every Buffer call gets its token here. Buffer's refresh tokens work once, and a reused one revokes the
 // person's whole grant. So one request refreshes under a short lease, and the others wait for its result.
 export async function getAccessToken(userId: string): Promise<string> {
-  const collection = await users();
+  const all = await users();
   for (let tries = 0; tries < WAIT_TRIES; tries++) {
-    const user = await collection.findOne({ _id: userId });
+    const user = await all.findOne({ _id: userId });
     const stored =
       user?.tokenEnc &&
       unseal<StoredTokens>(user.tokenEnc, secretEnv("TOKEN_KEY"));
@@ -87,7 +79,7 @@ export async function getAccessToken(userId: string): Promise<string> {
 
     // Only if the token is still the one we read: if another request already refreshed it, read again.
     const now = new Date();
-    const leased = await collection.findOneAndUpdate(
+    const leased = await all.findOneAndUpdate(
       {
         _id: userId,
         tokenEnc: user.tokenEnc,
@@ -105,7 +97,7 @@ export async function getAccessToken(userId: string): Promise<string> {
 }
 
 async function refresh(userId: string, refreshToken: string): Promise<string> {
-  const collection = await users();
+  const all = await users();
   let tokens: Tokens;
   try {
     tokens = await refreshTokens(refreshToken);
@@ -113,14 +105,14 @@ async function refresh(userId: string, refreshToken: string): Promise<string> {
     // A refused refresh token won't work again, so drop it and the person signs in again. After any
     // other failure the lease stays until it runs out, so the next try waits 30 seconds.
     if (err instanceof TokenError && err.code === "invalid_grant") {
-      await collection.updateOne(
+      await all.updateOne(
         { _id: userId },
         { $unset: { tokenEnc: "", tokenExpiresAt: "", refreshingUntil: "" } },
       );
     }
     throw err;
   }
-  await collection.updateOne(
+  await all.updateOne(
     { _id: userId },
     { $set: sealTokens(tokens), $unset: { refreshingUntil: "" } },
   );

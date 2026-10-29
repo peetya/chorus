@@ -1,6 +1,7 @@
 import express, { type ErrorRequestHandler } from "express";
 import { auth } from "./auth.ts";
 import { page } from "./html.ts";
+import { pages } from "./pages.ts";
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use(auth);
+app.use(pages);
 
 // Log only the message. Our error messages never include tokens or drafts.
 const onError: ErrorRequestHandler = (err, _req, res, _next) => {

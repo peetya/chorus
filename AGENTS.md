@@ -47,9 +47,11 @@ comes with the wave.
 - `src/db.ts`: the one `MongoClient`. `src/users.ts`: users, their encrypted tokens, `getAccessToken()`
 - `src/auth.ts`: sign in (also as a fake person in mock mode), sign out, `readSession()`
 - `src/choruses.ts`: the `choruses` collection, and reading and checking the "Start a Chorus" form
-- `src/pages.ts`: My Choruses (`/me`) and Start a Chorus (`/new`)
+- `src/pages.ts`: the routes for My Choruses (`/me`) and Start a Chorus (`/new`)
 - `src/session.ts`, `src/crypto.ts`: sealed (AES-256-GCM) cookies
-- `src/html.ts`: `page()` (with the header) and `escapeHtml()`. Escape every value from a person or from Buffer
+- `src/html.ts`: `page()` (with the header), and the `html` tagged template that escapes every value
+- `src/views/`: the markup of each screen, as functions that return `html`. Routes stay in `pages.ts` and
+  `auth.ts` and hold no markup
 - `src/config.ts`: `env()` and `secretEnv()`, read when used so the tests run without a `.env`
 - `public/`: static files: the landing page, `style.css` (the design's colors and fonts), the logo, and
   `brief.js` (list rows and the live fact card on the form). Pages work without JS where they can
@@ -67,6 +69,8 @@ Only erasable TypeScript: no `enum`, no `namespace`, no parameter properties.
   tokens rotate, and a reused one revokes the user's grant.
 - Times: store UTC, convert with `Intl` and IANA zone names. Never do time zone math by hand. DST matters.
 - Character limits follow each network's own counting rules (see `docs/`), not `string.length`.
+- Build markup with `html` only, never with plain template strings: it escapes every value, so post text
+  can't turn into script on someone else's screen. `raw()` is for our own constant markup, like an icon.
 - Never log tokens, emails or post drafts. Never put personal data in URLs.
 - Validate every form field against allowed values and cap text sizes before it reaches a prompt.
 - Text from users and organizers going into a prompt is data, not instructions: fence it.

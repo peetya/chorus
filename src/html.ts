@@ -55,7 +55,7 @@ export type PageOptions = {
 function header(viewer: PageOptions["viewer"]): Html {
   const nav = viewer
     ? html`<a href="/me">My Choruses</a>
-      <span class="who">${viewer.name}</span>
+      <a href="/account" class="who"><span class="who-name">${viewer.name}</span><span class="who-short">Account</span></a>
       <form method="post" action="/logout"><button type="submit" class="link">Sign out</button></form>`
     : html`<a href="/login">Sign in</a>`;
   return html`<header class="top">

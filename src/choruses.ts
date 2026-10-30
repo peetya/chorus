@@ -65,6 +65,13 @@ export function addDays(days: number): string {
   return new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
 }
 
+// "2026-11-11" plus 3 -> "2026-11-14".
+export function plusDays(day: string, days: number): string {
+  return new Date(Date.parse(`${day}T00:00:00Z`) + days * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
 // A wave runs through every time zone, so joining stays open until the day after.
 export function isOver(chorus: Chorus): boolean {
   return chorus.day < addDays(-1);

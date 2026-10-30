@@ -8,5 +8,11 @@
       "main": true,
       "develop": true
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cleanup",
+      "schedule": "0 4 * * *"
+    }
+  ]
 }

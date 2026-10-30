@@ -1,5 +1,5 @@
 import express, { type Response, Router } from "express";
-import { readSession, type Session } from "./auth.ts";
+import { readSession, type Session, signOut } from "./auth.ts";
 import {
   ACCOUNT_QUERY,
   type Account,
@@ -22,6 +22,7 @@ import {
   listOwned,
   parseChorus,
 } from "./choruses.ts";
+import { deleteUserData, tokensGoOn } from "./cleanup.ts";
 import { page } from "./html.ts";
 import {
   approvedByOthers,
@@ -43,7 +44,8 @@ import {
   stillScheduled,
 } from "./posts.ts";
 import { waveDueAt } from "./time.ts";
-import { getAccessToken, getUser, namesOf } from "./users.ts";
+import { dropTokens, getAccessToken, getUser, namesOf } from "./users.ts";
+import { accountPage, deletedPage } from "./views/account.ts";
 import { chorusNotFound, chorusPage } from "./views/chorus.ts";
 import { joinPage } from "./views/join.ts";
 import { shortName } from "./views/labels.ts";
@@ -101,6 +103,56 @@ pages.get("/me", async (req, res) => {
   ].sort((a, b) => a.chorus.day.localeCompare(b.chorus.day));
   res.send(page("My Choruses", myChoruses(items), { viewer: viewer(session) }));
 });
+
+pages.get("/account", async (req, res) => {
+  const session = readSession(req);
+  if (!session) return res.redirect("/login?next=/account");
+  const user = await getUser(session.userId);
+  if (!user) {
+    signOut(res);
+    return res.redirect("/");
+  }
+  const mine = await joinedBy(session.userId);
+  const owned = await listOwned(session.userId);
+  const othersJoined = (
+    await Promise.all(owned.map((chorus) => postsOf(chorus._id)))
+  )
+    .flat()
+    .filter((post) => post.userId !== session.userId).length;
+  res.send(
+    page(
+      "Account",
+      accountPage({
+        name: user.name,
+        connected: Boolean(user.tokenEnc),
+        tokensGoOn: await tokensGoOn(session.userId),
+        scheduled: mine.filter((post) => post.status === "scheduled").length,
+        othersJoined,
+      }),
+      { viewer: viewer(session) },
+    ),
+  );
+});
+
+pages.post("/account/disconnect", async (req, res) => {
+  const session = readSession(req);
+  if (!session) return res.redirect(303, "/login?next=/account");
+  await dropTokens(session.userId);
+  res.redirect(303, "/account");
+});
+
+pages.post(
+  "/account/delete",
+  express.urlencoded({ extended: false }),
+  async (req, res) => {
+    const session = readSession(req);
+    if (!session) return res.redirect(303, "/login?next=/account");
+    if (req.body?.confirm !== "yes") return res.redirect(303, "/account");
+    await deleteUserData(session.userId);
+    signOut(res);
+    res.send(page("Your data is deleted", deletedPage()));
+  },
+);
 
 pages.get("/new", (req, res) => {
   const session = readSession(req);

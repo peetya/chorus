@@ -21,10 +21,10 @@ const SESSION_COOKIE = "chorus_session";
 
 type OAuthState = { verifier: string; state: string; next: string };
 
-// Where to go after sign-in. Only our own Chorus pages, so a link can't send people to another site.
+// Where to go after sign-in. Only our own pages, so a link can't send people to another site.
 export function safeNext(next: unknown): string {
   return typeof next === "string" &&
-    /^\/c\/[\w-]{1,20}(\/join|\/post)?$/.test(next)
+    (/^\/c\/[\w-]{1,20}(\/join|\/post)?$/.test(next) || next === "/account")
     ? next
     : "/me";
 }
@@ -113,7 +113,11 @@ auth.post(
   },
 );
 
-auth.post("/logout", (_req, res) => {
+export function signOut(res: Response) {
   clearSealed(res, SESSION_COOKIE);
+}
+
+auth.post("/logout", (_req, res) => {
+  signOut(res);
   res.redirect(303, "/");
 });

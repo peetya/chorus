@@ -102,7 +102,7 @@ function dashboard(view: ChorusView): Html {
   <a href="/me" class="back">My Choruses</a>
   <h1>${chorus.title}</h1>
   <p class="mono muted">${[showDay(chorus.day), `${chorus.localTime} in each person's time zone`, until(chorus.day)].filter(Boolean).join(" · ")}</p>
-  ${view.live && html`<a href="/c/${chorus._id}" class="small">See the live wall</a>`}
+  ${(view.live || view.over) && html`<a href="/c/${chorus._id}" class="small">${view.live ? "See the live wall" : "See the finished wall"}</a>`}
 </div>
 <section class="invite-link">
   <label for="invite">Invite link</label>

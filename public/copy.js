@@ -1,4 +1,4 @@
-// The "Copy link" button next to the invite link.
+// The copy buttons on the dashboard: the invite link and the reminder.
 for (const button of document.querySelectorAll("[data-copy]")) {
   button.addEventListener("click", async () => {
     const input = document.getElementById(button.dataset.copy);

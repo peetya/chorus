@@ -3,7 +3,7 @@ import { type Html, html } from "../html.ts";
 import { shortName, showDay } from "./labels.ts";
 
 // Empty for yesterday: a wave still runs in the last time zones then, so it isn't done yet.
-function until(day: string): string {
+export function until(day: string): string {
   const days = Math.round(
     (Date.parse(day) - Date.parse(addDays(0))) / 86_400_000,
   );

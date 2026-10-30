@@ -1227,3 +1227,77 @@ form.write textarea {
   flex-direction: column;
   gap: 20px;
 }
+
+/* Live wall */
+
+.wall {
+  flex: 1 1 560px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.wall-count {
+  margin: 0;
+  font-size: 18px;
+}
+
+.wall-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.zone-title {
+  font-size: 20px;
+}
+
+.wall-zone ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+}
+
+.wall-post {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 12px 16px;
+}
+
+.wall-post + .wall-post {
+  border-top: 1px solid var(--soft);
+}
+
+.wall-who {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.wall-state {
+  margin-left: auto;
+  min-width: 96px;
+  text-align: right;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.wall-post.scheduled .avatar {
+  background: var(--line);
+}
+
+.wall-post.sent .avatar {
+  background: var(--accent);
+}
+
+.wall-post.failed .wall-state {
+  color: var(--error);
+}
+
+.join-heading {
+  font-size: 22px;
+}

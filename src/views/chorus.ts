@@ -14,10 +14,11 @@ export type ChorusView = {
   isOrganizer: boolean;
   post: Post | null; // the viewer's own, once they joined
   over: boolean;
+  live: boolean;
   inviteUrl: string;
 };
 
-function joinBox({ chorus, post, over, isOrganizer }: ChorusView): Html {
+export function joinBox({ chorus, post, over, isOrganizer }: ChorusView): Html {
   const when = html`${showDay(chorus.day)}, at ${chorus.localTime}`;
   if (post?.status === "scheduled" && post.dueAt) {
     const zone = post.channelTz;
@@ -101,6 +102,7 @@ function dashboard(view: ChorusView): Html {
   <a href="/me" class="back">My Choruses</a>
   <h1>${chorus.title}</h1>
   <p class="mono muted">${[showDay(chorus.day), `${chorus.localTime} in each person's time zone`, until(chorus.day)].filter(Boolean).join(" · ")}</p>
+  ${view.live && html`<a href="/c/${chorus._id}" class="small">See the live wall</a>`}
 </div>
 <section class="invite-link">
   <label for="invite">Invite link</label>

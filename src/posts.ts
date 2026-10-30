@@ -25,7 +25,9 @@ export type Post = {
   lockedAt?: Date;
   bufferPostId?: string;
   dueAt?: Date;
-  lastError?: string; // Buffer's reason when it refused the post, shown in the editor
+  lastError?: string; // Buffer's reason when it refused or failed the post
+  externalLink?: string; // the real post, once Buffer sent it
+  nextCheckAt?: Date; // when to ask Buffer whether it went out
   tzConfirmed: boolean; // Buffer's time zone defaults to Europe/London, so people confirm theirs
   aiShaped: boolean;
   statusChecks: number;
@@ -160,6 +162,16 @@ export async function claimForScheduling(
   );
 }
 
+// Buffer has no webhooks, so the wall asks after a post's time: at most 3 times, these minutes after it.
+export const CHECK_AFTER_MINUTES = [2, 15, 60];
+
+function checkAt(dueAt: Date, checksDone: number): Date | undefined {
+  const minutes = CHECK_AFTER_MINUTES[checksDone];
+  return minutes === undefined
+    ? undefined
+    : new Date(dueAt.getTime() + minutes * 60_000);
+}
+
 export async function markScheduled(
   id: string,
   bufferPostId: string,
@@ -168,9 +180,52 @@ export async function markScheduled(
   await (await posts()).updateOne(
     { _id: id },
     {
-      $set: { status: "scheduled", bufferPostId, dueAt },
+      $set: {
+        status: "scheduled",
+        bufferPostId,
+        dueAt,
+        statusChecks: 0,
+        nextCheckAt: checkAt(dueAt, 0),
+      },
       $unset: { lockedAt: "" },
     },
+  );
+}
+
+export async function dueForCheck(chorusId: string): Promise<Post[]> {
+  return (await posts())
+    .find({ chorusId, status: "scheduled", nextCheckAt: { $lte: new Date() } })
+    .limit(10)
+    .toArray();
+}
+
+// Only one wall request gets each check: the update matches only while nobody else counted it yet.
+export async function claimCheck(post: Post): Promise<boolean> {
+  const done = post.statusChecks + 1;
+  const next = post.dueAt && checkAt(post.dueAt, done);
+  const { modifiedCount } = await (await posts()).updateOne(
+    { _id: post._id, status: "scheduled", statusChecks: post.statusChecks },
+    next
+      ? { $inc: { statusChecks: 1 }, $set: { nextCheckAt: next } }
+      : { $inc: { statusChecks: 1 }, $unset: { nextCheckAt: "" } },
+  );
+  return modifiedCount === 1;
+}
+
+export async function markSent(id: string, externalLink: string | null) {
+  await (await posts()).updateOne(
+    { _id: id },
+    {
+      $set: { status: "sent", ...(externalLink && { externalLink }) },
+      $unset: { nextCheckAt: "" },
+    },
+  );
+}
+
+export async function markFailed(id: string, lastError: string) {
+  await (await posts()).updateOne(
+    { _id: id },
+    { $set: { status: "failed", lastError }, $unset: { nextCheckAt: "" } },
   );
 }
 
@@ -180,7 +235,7 @@ export async function backToDraft(id: string, lastError?: string) {
     { _id: id },
     {
       $set: { status: "drafting", ...(lastError && { lastError }) },
-      $unset: { lockedAt: "", bufferPostId: "", dueAt: "" },
+      $unset: { lockedAt: "", bufferPostId: "", dueAt: "", nextCheckAt: "" },
     },
   );
 }

@@ -3,6 +3,7 @@
 import { randomBytes } from "node:crypto";
 import {
   type Account,
+  type BufferPost,
   type Channel,
   TokenError,
   type Tokens,
@@ -118,8 +119,11 @@ export function mockTokens(personId: string): Tokens {
 // Posts the mock "scheduled", so a delete can be checked against them. Gone when the server restarts.
 export const scheduled = new Map<
   string,
-  { id: string; dueAt: string; owner: string }
+  { id: string; dueAt: string; owner: string; channelId: string }
 >();
+
+// A post on this channel fails when it's due, so a failed post can be tried on the wall.
+const FAILING_CHANNEL = "ch_zsofia_bsky";
 
 // Like Buffer: a refresh token works once.
 const spent = new Set<string>();
@@ -177,7 +181,11 @@ export function mockGraphql(
       id: `mockpost_${randomBytes(6).toString("hex")}`,
       dueAt: input.dueAt,
     };
-    scheduled.set(post.id, { ...post, owner: person.id });
+    scheduled.set(post.id, {
+      ...post,
+      owner: person.id,
+      channelId: input.channelId,
+    });
     return { createPost: { post: { ...post, status: "scheduled" } } };
   }
   if (operation === "DeletePost") {
@@ -187,6 +195,35 @@ export function mockGraphql(
     }
     scheduled.delete(id);
     return { deletePost: { id } };
+  }
+  if (operation === "PostStatus") {
+    const { id = "" } = (variables?.input ?? {}) as { id?: string };
+    const known = scheduled.get(id);
+    if (known && known.owner !== person.id) {
+      throw new Error("Buffer API error: FORBIDDEN (mock)");
+    }
+    // A post from before a restart is unknown: call it sent.
+    if (known && Date.parse(known.dueAt) > Date.now()) {
+      return {
+        post: { status: "scheduled", externalLink: null, error: null },
+      } satisfies { post: BufferPost };
+    }
+    if (known?.channelId === FAILING_CHANNEL) {
+      return {
+        post: {
+          status: "error",
+          externalLink: null,
+          error: { message: "Bluesky didn't accept the post (mock)" },
+        },
+      } satisfies { post: BufferPost };
+    }
+    return {
+      post: {
+        status: "sent",
+        externalLink: `https://example.com/mock/${id}`,
+        error: null,
+      },
+    } satisfies { post: BufferPost };
   }
   throw new Error(`Mock mode has no answer for ${operation ?? "this query"}`);
 }

@@ -77,6 +77,8 @@ Only erasable TypeScript: no `enum`, no `namespace`, no parameter properties.
 - No new dependency when a few lines or the standard library do the job. Ask first.
 - Every Buffer call goes through `getAccessToken(userId)`. Never refresh a token anywhere else: refresh
   tokens rotate, and a reused one revokes the user's grant.
+- Buffer has no webhooks, and the API budget is small. Ask about a post only through the status checks
+  (at most 3 per post, run when someone opens the wall, each claimed first). No cron, no polling loop.
 - Times: store UTC, convert with `Intl` and IANA zone names. Never do time zone math by hand. DST matters.
 - Character limits follow each network's own counting rules (see `docs/`), not `string.length`.
 - Build markup with `html` only, never with plain template strings: it escapes every value, so post text

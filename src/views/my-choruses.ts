@@ -1,4 +1,4 @@
-import { addDays, type Chorus } from "../choruses.ts";
+import { addDays, type Chorus, isLive } from "../choruses.ts";
 import { type Html, html } from "../html.ts";
 import { shortName, showDay } from "./labels.ts";
 
@@ -18,7 +18,9 @@ export type MyChorus = { chorus: Chorus; organizer: string | null };
 function card({ chorus, organizer }: MyChorus, done: boolean): Html {
   const when = done
     ? `Done · ${showDay(chorus.day)}`
-    : [showDay(chorus.day), until(chorus.day)].filter(Boolean).join(" · ");
+    : isLive(chorus)
+      ? `Live now · ${showDay(chorus.day)}`
+      : [showDay(chorus.day), until(chorus.day)].filter(Boolean).join(" · ");
   const role = organizer
     ? `You joined · organized by ${shortName(organizer)}`
     : "You organize";
@@ -44,13 +46,17 @@ ${items.map((item) => card(item, done))}
 export function myChoruses(items: MyChorus[]): Html {
   // A wave runs through every time zone, so it counts as done only the day after.
   const yesterday = addDays(-1);
-  const coming = items.filter(({ chorus }) => chorus.day >= yesterday);
+  const live = items.filter(({ chorus }) => isLive(chorus));
+  const coming = items.filter(
+    ({ chorus }) => chorus.day >= yesterday && !isLive(chorus),
+  );
   const done = items.filter(({ chorus }) => chorus.day < yesterday).reverse();
   return html`<div class="page-head row-head">
   <h1>My Choruses</h1>
   <a href="/new" class="button primary">Start a Chorus</a>
 </div>
 ${items.length === 0 && html`<p class="empty">No Choruses yet. Start one, then share its invite link with everyone who should post.</p>`}
+${group("Live now", live, false)}
 ${group("Coming up", coming, false)}
 ${group("Done", done, true)}`;
 }

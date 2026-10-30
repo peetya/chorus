@@ -10,7 +10,7 @@ import {
   graphql,
   isMock,
 } from "./buffer.ts";
-import { checkPost } from "./checks.ts";
+import { type CheckResult, checkPost } from "./checks.ts";
 import {
   addDays,
   type Chorus,
@@ -22,6 +22,7 @@ import {
 } from "./choruses.ts";
 import { page } from "./html.ts";
 import {
+  approvedByOthers,
   backToDraft,
   channelProblem,
   claimForScheduling,
@@ -30,6 +31,7 @@ import {
   joinChorus,
   joinedBy,
   markScheduled,
+  type Post,
   postsOf,
   saveText,
   stillScheduled,
@@ -218,6 +220,40 @@ async function organizerName(chorus: Chorus): Promise<string> {
   );
 }
 
+// The checks for one person's text: the brief, and the posts others in the Chorus already approved.
+async function checksFor(
+  chorus: Chorus,
+  post: Post,
+  text: string,
+): Promise<CheckResult> {
+  const approved = await approvedByOthers(chorus._id, post.userId);
+  const names = await namesOf([
+    chorus.ownerId,
+    ...approved.map((other) => other.userId),
+  ]);
+  return checkPost(
+    text,
+    chorus,
+    post.channelService,
+    shortName(names.get(chorus.ownerId) ?? "the organizer"),
+    approved.map((other) => ({
+      name: shortName(names.get(other.userId) ?? "someone"),
+      text: other.text ?? "",
+    })),
+  );
+}
+
+// Buffer's channel time zone, or one the person picked. Only real IANA names like "Asia/Tokyo".
+function validZone(zone: unknown): zone is string {
+  if (typeof zone !== "string" || !zone.includes("/")) return false;
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: zone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 pages.get("/c/:id/post", async (req, res) => {
   const session = readSession(req);
   const chorus = await getChorus(req.params.id);
@@ -229,12 +265,7 @@ pages.get("/c/:id/post", async (req, res) => {
   const organizer = await organizerName(chorus);
   // A new post starts with the main hashtag, so nobody forgets it.
   const text = post.text ?? `\n\n${chorus.hashtags[0] ?? ""}`;
-  const result = checkPost(
-    text,
-    chorus,
-    post.channelService,
-    shortName(organizer),
-  );
+  const result = await checksFor(chorus, post, text);
   res.send(
     page(
       "Your post",
@@ -273,13 +304,7 @@ pages.post(
       chorus && session && (await findPost(chorus._id, session.userId));
     if (!chorus || !post) return res.sendStatus(403);
     const text = typeof req.body?.text === "string" ? req.body.text : "";
-    const organizer = shortName(await organizerName(chorus));
-    res
-      .type("html")
-      .send(
-        checkList(checkPost(text, chorus, post.channelService, organizer))
-          .value,
-      );
+    res.type("html").send(checkList(await checksFor(chorus, post, text)).value);
   },
 );
 
@@ -290,64 +315,64 @@ pages.get("/c/:id/post/review", async (req, res) => {
   if (!session) return res.redirect(`/login?next=/c/${chorus._id}/post`);
   const post = await findPost(chorus._id, session.userId);
   if (post?.status !== "drafting") return res.redirect(`/c/${chorus._id}`);
-  const organizer = shortName(await organizerName(chorus));
-  const result = checkPost(
-    post.text ?? "",
-    chorus,
-    post.channelService,
-    organizer,
-  );
+  const result = await checksFor(chorus, post, post.text ?? "");
   res.send(
     page("Check your post", reviewPage(chorus, post, result), {
       viewer: viewer(session),
+      script: "review.js",
     }),
   );
 });
 
-pages.post("/c/:id/post/approve", async (req, res) => {
-  const session = readSession(req);
-  const chorus = await getChorus(req.params.id);
-  if (!chorus) return notFound(res, session);
-  if (!session) return res.redirect(303, `/login?next=/c/${chorus._id}/post`);
-  if (isOver(chorus)) return res.redirect(303, `/c/${chorus._id}`);
-  // Only one request gets the post. A double click finds it taken and just shows the Chorus.
-  const post = await claimForScheduling(chorus._id, session.userId);
-  if (!post) return res.redirect(303, `/c/${chorus._id}`);
-
-  // The saved text is checked again here: the review page could be old, or skipped.
-  const organizer = shortName(await organizerName(chorus));
-  const result = checkPost(
-    post.text ?? "",
-    chorus,
-    post.channelService,
-    organizer,
-  );
-  if (result.checks.some((check) => check.level === "block")) {
-    await backToDraft(post._id);
-    return res.redirect(303, `/c/${chorus._id}/post/review`);
-  }
-
-  try {
-    const scheduled = await createPost(await getAccessToken(session.userId), {
-      channelId: post.channelId,
-      service: post.channelService,
-      text: post.text ?? "",
-      dueAt: waveDueAt(chorus.day, chorus.localTime, post.channelTz),
-      aiAssisted: post.aiShaped,
-    });
-    if (!scheduled.ok) {
-      await backToDraft(post._id, scheduled.message);
-      return res.redirect(303, `/c/${chorus._id}/post`);
+pages.post(
+  "/c/:id/post/approve",
+  express.urlencoded({ extended: false }),
+  async (req, res) => {
+    const session = readSession(req);
+    const chorus = await getChorus(req.params.id);
+    if (!chorus) return notFound(res, session);
+    if (!session) return res.redirect(303, `/login?next=/c/${chorus._id}/post`);
+    if (isOver(chorus)) return res.redirect(303, `/c/${chorus._id}`);
+    const zone = req.body?.tz;
+    if (zone !== undefined && !validZone(zone)) {
+      return res.redirect(303, `/c/${chorus._id}/post/review`);
     }
-    await markScheduled(post._id, scheduled.id, new Date(scheduled.dueAt));
-  } catch (err) {
-    // Known limit: if Buffer created the post but its answer got lost, trying again makes a second
-    // post. The status checks on the live wall are where that would show up.
-    await backToDraft(post._id, "Buffer didn't answer. Try again in a minute.");
-    throw err;
-  }
-  res.redirect(303, `/c/${chorus._id}`);
-});
+    // Only one request gets the post. A double click finds it taken and just shows the Chorus.
+    const post = await claimForScheduling(chorus._id, session.userId, zone);
+    if (!post) return res.redirect(303, `/c/${chorus._id}`);
+
+    // The saved text is checked again here: the review page could be old, or skipped.
+    const result = await checksFor(chorus, post, post.text ?? "");
+    if (result.checks.some((check) => check.level === "block")) {
+      await backToDraft(post._id);
+      return res.redirect(303, `/c/${chorus._id}/post/review`);
+    }
+
+    try {
+      const scheduled = await createPost(await getAccessToken(session.userId), {
+        channelId: post.channelId,
+        service: post.channelService,
+        text: post.text ?? "",
+        dueAt: waveDueAt(chorus.day, chorus.localTime, post.channelTz),
+        aiAssisted: post.aiShaped,
+      });
+      if (!scheduled.ok) {
+        await backToDraft(post._id, scheduled.message);
+        return res.redirect(303, `/c/${chorus._id}/post`);
+      }
+      await markScheduled(post._id, scheduled.id, new Date(scheduled.dueAt));
+    } catch (err) {
+      // Known limit: if Buffer created the post but its answer got lost, trying again makes a second
+      // post. The status checks on the live wall are where that would show up.
+      await backToDraft(
+        post._id,
+        "Buffer didn't answer. Try again in a minute.",
+      );
+      throw err;
+    }
+    res.redirect(303, `/c/${chorus._id}`);
+  },
+);
 
 pages.post("/c/:id/post/withdraw", async (req, res) => {
   const session = readSession(req);

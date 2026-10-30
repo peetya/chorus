@@ -159,6 +159,28 @@ export function unknownClaims(text: string, chorus: Chorus): string[] {
   return [...new Set(claims)];
 }
 
+// Runs of three words, lowercased, for comparing two posts. A post shorter than that is one run.
+function wordRuns(text: string): Set<string> {
+  const words = normalize(text).match(/[\p{L}\p{N}]+/gu) ?? [];
+  if (words.length < 3) return new Set([words.join(" ")]);
+  return new Set(words.slice(2).map((_, i) => words.slice(i, i + 3).join(" ")));
+}
+
+// Shared runs out of all runs: 1 for the same post, near 0 for two posts in their own words. Quoting the
+// same fact in a longer post stays low.
+export function similarity(a: string, b: string): number {
+  const one = wordRuns(a);
+  const two = wordRuns(b);
+  const shared = [...one].filter((run) => two.has(run)).length;
+  return shared / (one.size + two.size - shared);
+}
+
+// X forbids identical or very similar posts across accounts, so this blocks.
+export const TOO_CLOSE = 0.5;
+
+// A post someone else in the Chorus already approved.
+export type Approved = { name: string; text: string };
+
 export type Check = {
   level: "ok" | "warn" | "block"; // only "block" stops a post: Buffer would refuse it
   text: string;
@@ -171,6 +193,7 @@ export function checkPost(
   chorus: Chorus,
   service: string,
   organizer: string,
+  approved: Approved[] = [],
 ): CheckResult {
   const length = lengthFor(service, text);
   const limit = limitOf(service);
@@ -184,6 +207,16 @@ export function checkPost(
     checks.push({
       level: "block",
       text: `Too long by ${(length - limit).toLocaleString("en")} characters for this network.`,
+    });
+  }
+
+  const close =
+    text.trim() &&
+    approved.find((other) => similarity(text, other.text) >= TOO_CLOSE);
+  if (close) {
+    checks.push({
+      level: "block",
+      text: `Your post is very close to ${close.name}'s. Add something of your own.`,
     });
   }
 

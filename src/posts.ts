@@ -53,11 +53,11 @@ export async function joinChorus(
         channelName: channel.name,
         channelService: channel.service,
         channelTz: channel.timezone,
+        tzConfirmed: false,
       },
       $setOnInsert: {
         _id: randomUUID(),
         status: "drafting",
-        tzConfirmed: false,
         aiShaped: false,
         statusChecks: 0,
         joinedAt: new Date(),
@@ -89,6 +89,22 @@ export async function findPost(
   return (await posts()).findOne({ chorusId, userId });
 }
 
+// The texts others in the Chorus approved, for the near-duplicate check. Two people approving close
+// texts in the same second can both get through; rare enough to accept.
+export async function approvedByOthers(
+  chorusId: string,
+  userId: string,
+): Promise<Post[]> {
+  return (await posts())
+    .find({
+      chorusId,
+      userId: { $ne: userId },
+      status: { $in: ["scheduling", "scheduled", "sent"] },
+      text: { $exists: true },
+    })
+    .toArray();
+}
+
 export async function postsOf(chorusId: string): Promise<Post[]> {
   return (await posts()).find({ chorusId }).sort({ joinedAt: 1 }).toArray();
 }
@@ -113,9 +129,11 @@ export function channelProblem(channel: Channel): string | null {
 const LOCK_MS = 2 * 60_000;
 export const WITHDRAW_BEFORE_MS = 5 * 60_000;
 
+// timeZone is the one the person confirmed on the review page.
 export async function claimForScheduling(
   chorusId: string,
   userId: string,
+  timeZone?: string,
 ): Promise<Post | null> {
   const now = new Date();
   return (await posts()).findOneAndUpdate(
@@ -131,7 +149,11 @@ export async function claimForScheduling(
       ],
     },
     {
-      $set: { status: "scheduling", lockedAt: now },
+      $set: {
+        status: "scheduling",
+        lockedAt: now,
+        ...(timeZone && { channelTz: timeZone, tzConfirmed: true }),
+      },
       $unset: { lastError: "" },
     },
     { returnDocument: "after" },

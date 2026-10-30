@@ -1221,3 +1221,9 @@ form.write textarea {
 .reminder .button {
   align-self: flex-start;
 }
+
+.review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}

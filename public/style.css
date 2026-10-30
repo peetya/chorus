@@ -108,16 +108,29 @@ main {
 .who {
   font-weight: 500;
   color: var(--muted);
+  text-decoration: none;
+}
+
+.who-short {
+  display: none;
 }
 
 .top form {
   margin: 0;
 }
 
-/* On a phone the header stays one line: the name goes, the links stay. */
+/* On a phone the header stays one line: the name becomes "Account", and signing out is on that page. */
 @media (max-width: 479px) {
-  .who {
+  .top form {
     display: none;
+  }
+
+  .who-name {
+    display: none;
+  }
+
+  .who-short {
+    display: inline;
   }
 }
 
@@ -1086,10 +1099,11 @@ form.write textarea {
   color: var(--accent-ink);
 }
 
-.sub-title {
+h2.sub-title {
   font-family: inherit;
   font-size: 18px;
   font-weight: 600;
+  color: var(--ink);
 }
 
 .own-post p {
@@ -1345,4 +1359,66 @@ a.finished-post:hover {
   min-width: 0;
   display: flex;
   flex-direction: column;
+}
+
+/* Account */
+
+.title-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.account {
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.account-who {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.account-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.avatar.big {
+  width: 48px;
+  height: 48px;
+  font-size: 15px;
+}
+
+.account ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.account p {
+  margin: 0;
+}
+
+.delete-form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.check-line {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.button.danger {
+  color: var(--accent-ink);
+  border-color: #e8b79a;
 }

@@ -16,6 +16,7 @@ export type User = {
   providerAccountId: string;
   name: string;
   organizationIds?: string[]; // from the account at sign-in, so listing channels takes one call less
+  signedInAt?: Date; // the daily cleanup keeps tokens at least a day after this
   tokenEnc?: string; // access and refresh token, sealed with TOKEN_KEY
   tokenExpiresAt?: Date;
   refreshingUntil?: Date; // the lease while one request refreshes the token
@@ -55,6 +56,7 @@ export async function saveUser(
       $set: {
         name: account.name,
         organizationIds: account.organizations.map((org) => org.id),
+        signedInAt: new Date(),
         ...sealTokens(tokens),
       },
       $unset: { refreshingUntil: "" },
@@ -78,6 +80,16 @@ export async function namesOf(userIds: string[]): Promise<Map<string, string>> {
   return new Map(found.map((user) => [user._id, user.name]));
 }
 
+// The tokens are gone: disconnected, cleaned up, or refused by Buffer. The person signs in again.
+export class NotConnectedError extends Error {}
+
+export async function dropTokens(userId: string) {
+  await (await users()).updateOne(
+    { _id: userId },
+    { $unset: { tokenEnc: "", tokenExpiresAt: "", refreshingUntil: "" } },
+  );
+}
+
 // Every Buffer call gets its token here. Buffer's refresh tokens work once, and a reused one revokes the
 // person's whole grant. So one request refreshes under a short lease, and the others wait for its result.
 export async function getAccessToken(userId: string): Promise<string> {
@@ -88,7 +100,7 @@ export async function getAccessToken(userId: string): Promise<string> {
       user?.tokenEnc &&
       unseal<StoredTokens>(user.tokenEnc, secretEnv("TOKEN_KEY"));
     if (!user?.tokenEnc || !stored) {
-      throw new Error("Not connected to Buffer: sign in again");
+      throw new NotConnectedError("Not connected to Buffer: sign in again");
     }
     if (user.tokenExpiresAt && user.tokenExpiresAt > new Date()) {
       return stored.accessToken;
@@ -122,10 +134,7 @@ async function refresh(userId: string, refreshToken: string): Promise<string> {
     // A refused refresh token won't work again, so drop it and the person signs in again. After any
     // other failure the lease stays until it runs out, so the next try waits 30 seconds.
     if (err instanceof TokenError && err.code === "invalid_grant") {
-      await all.updateOne(
-        { _id: userId },
-        { $unset: { tokenEnc: "", tokenExpiresAt: "", refreshingUntil: "" } },
-      );
+      await dropTokens(userId);
     }
     throw err;
   }

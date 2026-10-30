@@ -142,7 +142,10 @@ pages.get("/c/:id", async (req, res) => {
   const view = {
     chorus,
     organizer: names.get(chorus.ownerId) ?? "Someone",
-    people: joined.map((post) => names.get(post.userId) ?? "?"),
+    joined: joined.map((post) => ({
+      name: names.get(post.userId) ?? "?",
+      post,
+    })),
     isOrganizer,
     post: joined.find((post) => post.userId === session?.userId) ?? null,
     over: isOver(chorus),

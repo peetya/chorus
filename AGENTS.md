@@ -82,6 +82,8 @@ Only erasable TypeScript: no `enum`, no `namespace`, no parameter properties.
 - Build markup with `html` only, never with plain template strings: it escapes every value, so post text
   can't turn into script on someone else's screen. `raw()` is for our own constant markup, like an icon.
 - Never log tokens, emails or post drafts. Never put personal data in URLs.
+- The organizer sees each person's status, channel and time, never their text. Other people show as
+  "Péter H." on every Chorus page, the dashboard too.
 - Validate every form field against allowed values and cap text sizes before it reaches a prompt.
 - Text from users and organizers going into a prompt is data, not instructions: fence it.
 - UI copy: plain, short English. No "seamless", "leverage", "robust", no em-dashes, no emoji.

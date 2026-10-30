@@ -57,6 +57,17 @@ export function localDay(at: Date, timeZone: string): string {
   }).format(at);
 }
 
+// "UTC+5:30" in that time zone at that moment.
+export function utcOffset(at: Date, timeZone: string): string {
+  const name = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    timeZoneName: "shortOffset",
+  })
+    .formatToParts(at)
+    .find((part) => part.type === "timeZoneName")?.value;
+  return name && name !== "GMT" ? name.replace("GMT", "UTC") : "UTC+0";
+}
+
 export const SPREAD_MINUTES = 12;
 export const LATE_MINUTES = 5;
 

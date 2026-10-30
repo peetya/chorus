@@ -7,16 +7,18 @@ import {
   createPost,
   deletePost,
   getChannels,
+  getPost,
   graphql,
   isMock,
 } from "./buffer.ts";
 import { type CheckResult, checkPost } from "./checks.ts";
 import {
-  addDays,
   type Chorus,
   chorusesById,
   createChorus,
   getChorus,
+  isLive,
+  isOver,
   listOwned,
   parseChorus,
 } from "./choruses.ts";
@@ -25,12 +27,16 @@ import {
   approvedByOthers,
   backToDraft,
   channelProblem,
+  claimCheck,
   claimForScheduling,
   claimForWithdraw,
+  dueForCheck,
   findPost,
   joinChorus,
   joinedBy,
+  markFailed,
   markScheduled,
+  markSent,
   type Post,
   postsOf,
   saveText,
@@ -44,17 +50,13 @@ import { shortName } from "./views/labels.ts";
 import { myChoruses } from "./views/my-choruses.ts";
 import { newChorusForm } from "./views/new-chorus.ts";
 import { reviewPage } from "./views/review.ts";
+import { wallList, wallPage } from "./views/wall.ts";
 import { checkList, writePage } from "./views/write.ts";
 
 export const pages = Router();
 
 function viewer(session: Session) {
   return { name: isMock() ? `${session.name} (mock mode)` : session.name };
-}
-
-// A wave runs through every time zone, so joining stays open until the day after.
-function isOver(chorus: Chorus): boolean {
-  return chorus.day < addDays(-1);
 }
 
 function notFound(res: Response, session: Session | null) {
@@ -131,15 +133,50 @@ pages.post(
   },
 );
 
-pages.get("/c/:id", async (req, res) => {
-  const session = readSession(req);
-  const chorus = await getChorus(req.params.id);
-  if (!chorus) return notFound(res, session);
+// Asks Buffer about the posts whose time has passed. It runs when someone opens the wall, not on a
+// cron, and each check is claimed first, so many viewers don't ask about one post many times.
+async function runDueChecks(chorusId: string) {
+  const due = await dueForCheck(chorusId);
+  await Promise.all(
+    due.map(async (post) => {
+      if (!post.bufferPostId || !(await claimCheck(post))) return;
+      try {
+        const sent = await getPost(
+          await getAccessToken(post.userId),
+          post.bufferPostId,
+        );
+        if (sent.status === "sent") {
+          await markSent(post._id, sent.externalLink);
+        } else if (sent.status === "error") {
+          await markFailed(
+            post._id,
+            sent.error?.message ?? "Buffer couldn't send it.",
+          );
+        }
+      } catch (err) {
+        // The wall still loads; the next check asks again.
+        console.error(`Status check failed for post ${post._id}:`, err);
+      }
+    }),
+  );
+}
+
+async function peopleIn(chorus: Chorus) {
   const joined = await postsOf(chorus._id);
   const names = await namesOf([
     chorus.ownerId,
     ...joined.map((post) => post.userId),
   ]);
+  return { joined, names };
+}
+
+pages.get("/c/:id", async (req, res) => {
+  const session = readSession(req);
+  const chorus = await getChorus(req.params.id);
+  if (!chorus) return notFound(res, session);
+  const live = isLive(chorus);
+  if (live) await runDueChecks(chorus._id);
+  const { joined, names } = await peopleIn(chorus);
   const isOrganizer = session?.userId === chorus.ownerId;
   const view = {
     chorus,
@@ -151,14 +188,31 @@ pages.get("/c/:id", async (req, res) => {
     isOrganizer,
     post: joined.find((post) => post.userId === session?.userId) ?? null,
     over: isOver(chorus),
+    live,
     inviteUrl: `https://${req.get("host")}/c/${chorus._id}`,
   };
+  // On the day everyone sees the wall. The organizer can still open the dashboard.
+  const wall = live && !(isOrganizer && req.query.dashboard !== undefined);
   res.send(
-    page(chorus.title, chorusPage(view), {
+    page(chorus.title, wall ? wallPage(view) : chorusPage(view), {
       viewer: session && viewer(session),
-      script: isOrganizer ? "copy.js" : undefined,
+      script: wall ? "wall.js" : isOrganizer ? "copy.js" : undefined,
     }),
   );
+});
+
+pages.get("/c/:id/wall", async (req, res) => {
+  const chorus = await getChorus(req.params.id);
+  if (!chorus) return res.sendStatus(404);
+  if (isLive(chorus)) await runDueChecks(chorus._id);
+  const { joined, names } = await peopleIn(chorus);
+  res
+    .type("html")
+    .send(
+      wallList(
+        joined.map((post) => ({ name: names.get(post.userId) ?? "?", post })),
+      ).value,
+    );
 });
 
 pages.get("/c/:id/join", async (req, res) => {

@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { collection } from "./db.ts";
+import { zonedToUtc } from "./time.ts";
 
 export const TONES = {
   any: "Let everyone choose",
@@ -62,6 +63,17 @@ function isDay(day: string): boolean {
 
 export function addDays(days: number): string {
   return new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+}
+
+// A wave runs through every time zone, so joining stays open until the day after.
+export function isOver(chorus: Chorus): boolean {
+  return chorus.day < addDays(-1);
+}
+
+// Live from midnight where the day starts first (UTC+14) until joining closes.
+export function isLive(chorus: Chorus): boolean {
+  const start = zonedToUtc(chorus.day, "00:00", "Pacific/Kiritimati");
+  return Date.now() >= start.getTime() && !isOver(chorus);
 }
 
 function isLink(link: string): boolean {

@@ -213,6 +213,29 @@ const DELETE_POST = `mutation DeletePost($input: DeletePostInput!) {
   }
 }`;
 
+const POST_STATUS = `query PostStatus($input: PostInput!) {
+  post(input: $input) { status externalLink error { message } }
+}`;
+
+// status is one of draft, needs_approval, scheduled, sending, sent, error.
+export type BufferPost = {
+  status: string;
+  externalLink: string | null;
+  error: { message: string } | null;
+};
+
+export async function getPost(
+  accessToken: string,
+  id: string,
+): Promise<BufferPost> {
+  const { post } = await graphql<{ post: BufferPost }>(
+    accessToken,
+    POST_STATUS,
+    { input: { id } },
+  );
+  return post;
+}
+
 // Some networks refuse a post without their own metadata. Google Business goes under "google".
 function metadataFor(
   service: string,

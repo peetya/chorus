@@ -70,7 +70,7 @@ test("approving schedules the post in Buffer at 09:00 in the person's zone", asy
   ).text();
   assert.match(
     check,
-    /between <strong>09:00<\/strong> and <strong>09:12<\/strong> Kolkata time/,
+    /between <strong>09:00<\/strong> and <strong>09:12<\/strong> in your time zone/,
   );
 
   const approved = await post(base, `${path}/post/approve`, cookie);

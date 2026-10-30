@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkPost, lengthFor, unknownClaims } from "../src/checks.ts";
+import {
+  checkPost,
+  lengthFor,
+  similarity,
+  TOO_CLOSE,
+  unknownClaims,
+} from "../src/checks.ts";
 import type { Chorus } from "../src/choruses.ts";
 
 const chorus: Chorus = {
@@ -91,5 +97,35 @@ test("a good post passes", () => {
   assert.ok(
     checks.every((check) => check.level === "ok"),
     JSON.stringify(checks),
+  );
+});
+
+test("near-identical posts are too close, own words are not", () => {
+  const maya =
+    "Tally 2.0 is out today, free for teams up to 5. I moved our standups to it last week. #TallyLaunch";
+  // The same post with a word changed and the case and punctuation different.
+  const copy =
+    "tally 2.0 is out today - free for teams up to 5! I moved our standups to it this week #TallyLaunch";
+  assert.ok(similarity(maya, copy) >= TOO_CLOSE);
+  assert.equal(similarity(maya, maya), 1);
+  // Quoting the same fact inside a post of your own stays well below.
+  const own =
+    "Our design team tried Tally for a month. Tally 2.0 is out today, free for teams up to 5. The Notion sync is what sold us. #TallyLaunch";
+  assert.ok(similarity(maya, own) < TOO_CLOSE);
+  assert.ok(similarity("Big day!", "Huge news today") < TOO_CLOSE);
+});
+
+test("a post too close to an approved one is blocked, with the name", () => {
+  const text = "Tally 2.0 is out today. #TallyLaunch";
+  const { checks } = checkPost(text, chorus, "linkedin", "Zsófia K.", [
+    { name: "Maya L.", text: "Tally 2.0 is out today! #TallyLaunch" },
+  ]);
+  assert.ok(
+    checks.some(
+      (check) =>
+        check.level === "block" &&
+        check.text ===
+          "Your post is very close to Maya L.'s. Add something of your own.",
+    ),
   );
 });

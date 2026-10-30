@@ -160,5 +160,7 @@ test("joining stays open the day after, then closes", async (t) => {
   const html = await (
     await fetch(`${base}/c/oldwave1`, { headers: { cookie } })
   ).text();
-  assert.match(html, /Joining is closed/);
+  // An old Chorus shows the finished wall, without a way to join.
+  assert.match(html, /This Chorus is over\./);
+  assert.doesNotMatch(html, /Join with Buffer/);
 });

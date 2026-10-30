@@ -50,7 +50,7 @@ import { shortName } from "./views/labels.ts";
 import { myChoruses } from "./views/my-choruses.ts";
 import { newChorusForm } from "./views/new-chorus.ts";
 import { reviewPage } from "./views/review.ts";
-import { wallList, wallPage } from "./views/wall.ts";
+import { finishedPage, wallList, wallPage } from "./views/wall.ts";
 import { checkList, writePage } from "./views/write.ts";
 
 export const pages = Router();
@@ -175,7 +175,9 @@ pages.get("/c/:id", async (req, res) => {
   const chorus = await getChorus(req.params.id);
   if (!chorus) return notFound(res, session);
   const live = isLive(chorus);
-  if (live) await runDueChecks(chorus._id);
+  const over = isOver(chorus);
+  // Late posts can still be due for a check after the day, so this runs on the finished wall too.
+  if (live || over) await runDueChecks(chorus._id);
   const { joined, names } = await peopleIn(chorus);
   const isOrganizer = session?.userId === chorus.ownerId;
   const view = {
@@ -187,12 +189,21 @@ pages.get("/c/:id", async (req, res) => {
     })),
     isOrganizer,
     post: joined.find((post) => post.userId === session?.userId) ?? null,
-    over: isOver(chorus),
+    over,
     live,
     inviteUrl: `https://${req.get("host")}/c/${chorus._id}`,
   };
-  // On the day everyone sees the wall. The organizer can still open the dashboard.
-  const wall = live && !(isOrganizer && req.query.dashboard !== undefined);
+  // From the day on everyone sees the wall. The organizer can still open the dashboard.
+  const dashboard = isOrganizer && req.query.dashboard !== undefined;
+  if (over && !dashboard) {
+    return res.send(
+      page(chorus.title, finishedPage(view), {
+        viewer: session && viewer(session),
+        script: "copy.js",
+      }),
+    );
+  }
+  const wall = live && !dashboard;
   res.send(
     page(chorus.title, wall ? wallPage(view) : chorusPage(view), {
       viewer: session && viewer(session),

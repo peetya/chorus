@@ -21,6 +21,7 @@ function state(post: Post & { dueAt: Date }): Html {
       : html`Posted`;
   }
   if (post.status === "failed") return html`Didn't go out`;
+  if (post.status === "drafted") return html`In drafts`;
   if (post.dueAt.getTime() > Date.now()) return html`Scheduled`;
   return post.nextCheckAt ? html`Going out` : html`Not confirmed by Buffer`;
 }

@@ -31,10 +31,12 @@ import {
   claimCheck,
   claimForScheduling,
   claimForWithdraw,
+  draftScheduled,
   dueForCheck,
   findPost,
   joinChorus,
   joinedBy,
+  markDrafted,
   markFailed,
   markScheduled,
   markSent,
@@ -185,8 +187,9 @@ pages.post(
   },
 );
 
-// Asks Buffer about the posts whose time has passed. It runs when someone opens the wall, not on a
-// cron, and each check is claimed first, so many viewers don't ask about one post many times.
+// Asks Buffer about posts whose next check is due: scheduled posts after their time, and drafts now and
+// then, to see if the person scheduled or posted them from Buffer. It runs when someone opens the Chorus,
+// not on a cron, and each check is claimed first, so many viewers don't ask about one post many times.
 async function runDueChecks(chorusId: string) {
   const due = await dueForCheck(chorusId);
   await Promise.all(
@@ -199,6 +202,13 @@ async function runDueChecks(chorusId: string) {
         );
         if (sent.status === "sent") {
           await markSent(post._id, sent.externalLink);
+        } else if (
+          post.status === "drafted" &&
+          sent.status !== "draft" &&
+          sent.status !== "error" &&
+          sent.dueAt
+        ) {
+          await draftScheduled(post._id, new Date(sent.dueAt));
         } else if (sent.status === "error") {
           await markFailed(
             post._id,
@@ -228,8 +238,8 @@ pages.get("/c/:id", async (req, res) => {
   if (!chorus) return notFound(res, session);
   const live = isLive(chorus);
   const over = isOver(chorus);
-  // Late posts can still be due for a check after the day, so this runs on the finished wall too.
-  if (live || over) await runDueChecks(chorus._id);
+  // Drafts are checked before the day too, and late posts after it.
+  await runDueChecks(chorus._id);
   const { joined, names } = await peopleIn(chorus);
   const isOrganizer = session?.userId === chorus.ownerId;
   const view = {
@@ -457,6 +467,7 @@ pages.post(
     // Only one request gets the post. A double click finds it taken and just shows the Chorus.
     const post = await claimForScheduling(chorus._id, session.userId, zone);
     if (!post) return res.redirect(303, `/c/${chorus._id}`);
+    const asDraft = req.body?.as === "draft";
 
     // The saved text is checked again here: the review page could be old, or skipped.
     const result = await checksFor(chorus, post, post.text ?? "");
@@ -472,12 +483,14 @@ pages.post(
         text: post.text ?? "",
         dueAt: waveDueAt(chorus.day, chorus.localTime, post.channelTz),
         aiAssisted: post.aiShaped,
+        saveToDraft: asDraft,
       });
       if (!scheduled.ok) {
         await backToDraft(post._id, scheduled.message);
         return res.redirect(303, `/c/${chorus._id}/post`);
       }
-      await markScheduled(post._id, scheduled.id, new Date(scheduled.dueAt));
+      const mark = asDraft ? markDrafted : markScheduled;
+      await mark(post._id, scheduled.id, new Date(scheduled.dueAt));
     } catch (err) {
       // Known limit: if Buffer created the post but its answer got lost, trying again makes a second
       // post. The status checks on the live wall are where that would show up.
@@ -498,17 +511,18 @@ pages.post("/c/:id/post/withdraw", async (req, res) => {
   if (!session) return res.redirect(303, "/login");
   const post = await claimForWithdraw(chorus._id, session.userId);
   if (!post?.bufferPostId) return res.redirect(303, `/c/${chorus._id}`);
+  const before = post.status === "drafted" ? "drafted" : "scheduled";
   try {
     const problem = await deletePost(
       await getAccessToken(session.userId),
       post.bufferPostId,
     );
     if (problem) {
-      await stillScheduled(post._id);
+      await stillScheduled(post._id, before);
       return res.redirect(303, `/c/${chorus._id}`);
     }
   } catch (err) {
-    await stillScheduled(post._id);
+    await stillScheduled(post._id, before);
     throw err;
   }
   await backToDraft(post._id);

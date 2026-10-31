@@ -15,7 +15,7 @@ after another through one day in one city (a relay). Built on Buffer's public AP
 - Node 24 (runs the TypeScript directly, no build step), TypeScript, Express. Plain server-rendered HTML pages with a little JS. No frontend framework
 - MongoDB Atlas with the plain `mongodb` driver (collections: `users`, `choruses`, `posts`)
 - Buffer GraphQL API through OAuth app clients (PKCE, refresh tokens)
-- Claude API (`@anthropic-ai/sdk`) for the optional "Draft with AI" step only
+- OpenAI API (`openai`) for the optional "Draft with AI" step only (`src/ai.ts`). Mock mode fakes it
 - `sharp` for image crops, Vercel Blob for image hosting
 - Hosted on Vercel. Tests with `node --test`
 

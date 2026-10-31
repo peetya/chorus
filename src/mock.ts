@@ -3,6 +3,7 @@
 import { randomBytes } from "node:crypto";
 import {
   type Account,
+  BufferApiError,
   type BufferPost,
   type Channel,
   TokenError,
@@ -222,8 +223,10 @@ export function mockGraphql(
         },
       } satisfies { post: BufferPost };
     }
-    // A post from before a restart is unknown: call it sent.
-    if (known && Date.parse(known.dueAt) > Date.now()) {
+    // Like Buffer after the person deleted it. A post from before a restart is unknown too.
+    if (!known)
+      throw new BufferApiError("NOT_FOUND", `Post not found for id: ${id}`);
+    if (Date.parse(known.dueAt) > Date.now()) {
       return {
         post: {
           status: "scheduled",
@@ -233,7 +236,7 @@ export function mockGraphql(
         },
       } satisfies { post: BufferPost };
     }
-    if (known?.channelId === FAILING_CHANNEL) {
+    if (known.channelId === FAILING_CHANNEL) {
       return {
         post: {
           status: "error",
@@ -246,7 +249,7 @@ export function mockGraphql(
     return {
       post: {
         status: "sent",
-        dueAt: known?.dueAt ?? null,
+        dueAt: known.dueAt,
         externalLink: `https://example.com/mock/${id}`,
         error: null,
       },

@@ -1,4 +1,5 @@
 import express, { type Response, Router } from "express";
+import { AI_USES, AiError, type Answer, aiEnabled, draftWithAi } from "./ai.ts";
 import { readSession, type Session, signOut } from "./auth.ts";
 import {
   ACCOUNT_QUERY,
@@ -28,20 +29,25 @@ import {
   approvedByOthers,
   backToDraft,
   channelProblem,
+  claimAiUse,
   claimCheck,
   claimForScheduling,
   claimForWithdraw,
+  deletedInBuffer,
   draftScheduled,
   dueForCheck,
   findPost,
+  giveAiUseBack,
   joinChorus,
   joinedBy,
+  MAX_ANSWER,
   markDrafted,
   markFailed,
   markScheduled,
   markSent,
   type Post,
   postsOf,
+  saveAiDraft,
   saveText,
   stillScheduled,
 } from "./posts.ts";
@@ -55,7 +61,7 @@ import { myChoruses } from "./views/my-choruses.ts";
 import { newChorusForm } from "./views/new-chorus.ts";
 import { reviewPage } from "./views/review.ts";
 import { finishedPage, wallList, wallPage } from "./views/wall.ts";
-import { checkList, writePage } from "./views/write.ts";
+import { aiPage, checkList, writePage } from "./views/write.ts";
 
 export const pages = Router();
 
@@ -200,7 +206,9 @@ async function runDueChecks(chorusId: string) {
           await getAccessToken(post.userId),
           post.bufferPostId,
         );
-        if (sent.status === "sent") {
+        if (!sent) {
+          await deletedInBuffer(post._id, post.status);
+        } else if (sent.status === "sent") {
           await markSent(post._id, sent.externalLink);
         } else if (
           post.status === "drafted" &&
@@ -367,6 +375,7 @@ async function checksFor(
       name: shortName(names.get(other.userId) ?? "someone"),
       text: other.text ?? "",
     })),
+    post.answers?.map((a) => a.answer),
   );
 }
 
@@ -396,7 +405,16 @@ pages.get("/c/:id/post", async (req, res) => {
   res.send(
     page(
       "Your post",
-      writePage(chorus, post, organizer, text, result, req.query.saved === "1"),
+      writePage(
+        chorus,
+        post,
+        organizer,
+        text,
+        result,
+        req.query.saved === "1",
+        aiEnabled() ? { usesLeft: AI_USES - (post.aiUses ?? 0) } : null,
+        req.query.drafted === "1",
+      ),
       { viewer: viewer(session), script: "write.js" },
     ),
   );
@@ -432,6 +450,100 @@ pages.post(
     if (!chorus || !post) return res.sendStatus(403);
     const text = typeof req.body?.text === "string" ? req.body.text : "";
     res.type("html").send(checkList(await checksFor(chorus, post, text)).value);
+  },
+);
+
+// The person's own post that "Draft with AI" may write: signed in, joined and still drafting.
+async function draftingPost(req: express.Request, res: Response) {
+  const session = readSession(req);
+  const chorus = await getChorus(String(req.params.id));
+  if (!chorus) return notFound(res, session);
+  if (!session) return res.redirect(303, `/login?next=/c/${chorus._id}/post`);
+  const post = await findPost(chorus._id, session.userId);
+  if (post?.status !== "drafting" || !aiEnabled()) {
+    return res.redirect(303, `/c/${chorus._id}/post`);
+  }
+  return { session, chorus, post };
+}
+
+async function sendAiPage(
+  res: Response,
+  { session, chorus, post }: { session: Session; chorus: Chorus; post: Post },
+  answers: Answer[],
+  extra: { followUp?: string; error?: string } = {},
+) {
+  res
+    .status(extra.error ? 400 : 200)
+    .send(
+      page(
+        "Draft with AI",
+        aiPage(
+          chorus,
+          post,
+          await organizerName(chorus),
+          answers,
+          AI_USES - (post.aiUses ?? 0),
+          extra.followUp,
+          extra.error,
+        ),
+        { viewer: viewer(session), script: "ai.js" },
+      ),
+    );
+}
+
+pages.get("/c/:id/post/ai", async (req, res) => {
+  const found = await draftingPost(req, res);
+  if (!found || !("post" in found)) return;
+  await sendAiPage(res, found, found.post.answers ?? []);
+});
+
+pages.post(
+  "/c/:id/post/ai",
+  express.urlencoded({ extended: false, limit: "16kb" }),
+  async (req, res) => {
+    const found = await draftingPost(req, res);
+    if (!found || !("post" in found)) return;
+    const { chorus, post } = found;
+    const field = (value: unknown) =>
+      typeof value === "string" ? value.trim().slice(0, MAX_ANSWER) : "";
+    const given = [req.body?.answer ?? []].flat();
+    const answers: Answer[] = chorus.questions.map((question, i) => ({
+      question,
+      answer: field(given[i]),
+    }));
+    const followUp = field(req.body?.followUp).slice(0, 300);
+    const followUpAnswer = field(req.body?.followUpAnswer);
+    if (followUp && followUpAnswer) {
+      answers.push({ question: followUp, answer: followUpAnswer });
+    }
+    if (!answers.some((a) => a.answer)) {
+      return sendAiPage(res, found, answers, {
+        followUp,
+        error: "Answer at least one question first.",
+      });
+    }
+    if (!(await claimAiUse(post._id, AI_USES))) {
+      return sendAiPage(res, found, answers, {
+        error:
+          "You've used all your AI tries for this Chorus. Write it yourself, the brief is next to the editor.",
+      });
+    }
+    let result: Awaited<ReturnType<typeof draftWithAi>>;
+    try {
+      result = await draftWithAi(chorus, post.channelService, answers);
+    } catch (err) {
+      await giveAiUseBack(post._id);
+      if (!(err instanceof AiError)) throw err;
+      return sendAiPage(res, found, answers, { followUp, error: err.message });
+    }
+    const used = { ...post, aiUses: (post.aiUses ?? 0) + 1 };
+    if ("followUp" in result) {
+      return sendAiPage(res, { ...found, post: used }, answers, {
+        followUp: result.followUp,
+      });
+    }
+    await saveAiDraft(post._id, result.text, answers);
+    res.redirect(303, `/c/${chorus._id}/post?drafted=1`);
   },
 );
 

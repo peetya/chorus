@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { Answer } from "./ai.ts";
 import type { Channel } from "./buffer.ts";
 import { collection } from "./db.ts";
 
@@ -31,7 +32,9 @@ export type Post = {
   externalLink?: string; // the real post, once Buffer sent it
   nextCheckAt?: Date; // when to ask Buffer whether it went out
   tzConfirmed: boolean; // Buffer's time zone defaults to Europe/London, so people confirm theirs
-  aiShaped: boolean;
+  aiShaped: boolean; // "Draft with AI" wrote it; Buffer gets aiAssisted
+  answers?: Answer[]; // only from "Draft with AI": the fact check accepts what's in them
+  aiUses?: number;
   statusChecks: number;
   joinedAt: Date;
 };
@@ -72,6 +75,7 @@ export async function joinChorus(
 }
 
 export const MAX_TEXT = 10_000;
+export const MAX_ANSWER = 1000;
 
 // Only while drafting: once a post is scheduled, its text lives in Buffer and changes go through there.
 export async function saveText(
@@ -84,6 +88,34 @@ export async function saveText(
     { $set: { text: text.slice(0, MAX_TEXT), savedAt: new Date() } },
   );
   return matchedCount === 1;
+}
+
+// Takes one of the person's AI calls before asking, so a double click can't use two.
+export async function claimAiUse(id: string, max: number): Promise<boolean> {
+  const { modifiedCount } = await (await posts()).updateOne(
+    { _id: id, status: "drafting", aiUses: { $not: { $gte: max } } },
+    { $inc: { aiUses: 1 } },
+  );
+  return modifiedCount === 1;
+}
+
+// The call failed, so it doesn't count.
+export async function giveAiUseBack(id: string) {
+  await (await posts()).updateOne({ _id: id }, { $inc: { aiUses: -1 } });
+}
+
+export async function saveAiDraft(id: string, text: string, answers: Answer[]) {
+  await (await posts()).updateOne(
+    { _id: id, status: "drafting" },
+    {
+      $set: {
+        text: text.slice(0, MAX_TEXT),
+        answers,
+        aiShaped: true,
+        savedAt: new Date(),
+      },
+    },
+  );
 }
 
 export async function findPost(
@@ -276,6 +308,18 @@ export async function backToDraft(id: string, lastError?: string) {
     {
       $set: { status: "drafting", ...(lastError && { lastError }) },
       $unset: { lockedAt: "", bufferPostId: "", dueAt: "", nextCheckAt: "" },
+    },
+  );
+}
+
+// The person deleted it in Buffer, so it's theirs to edit again. Only if nothing changed it meanwhile,
+// like a withdraw in progress.
+export async function deletedInBuffer(id: string, status: Post["status"]) {
+  await (await posts()).updateOne(
+    { _id: id, status },
+    {
+      $set: { status: "drafting" },
+      $unset: { bufferPostId: "", dueAt: "", nextCheckAt: "" },
     },
   );
 }

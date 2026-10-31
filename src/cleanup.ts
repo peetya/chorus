@@ -64,7 +64,7 @@ export async function dailyCleanup(): Promise<{
       chorusId: { $in: old.map((chorus) => chorus._id) },
       text: { $exists: true },
     },
-    { $unset: { text: "", lastError: "" } },
+    { $unset: { text: "", answers: "", lastError: "" } },
   );
 
   let tokens = 0;

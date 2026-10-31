@@ -106,9 +106,14 @@ const MONTH = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-// Numbers, links, @mentions and names in a post that the fact card doesn't have. The first word of a
+// Numbers, links, @mentions and names in a post that the fact card (or the person's own AI answers)
+// doesn't have. The first word of a
 // sentence and "I" are skipped, so only names in the middle of a sentence count.
-export function unknownClaims(text: string, chorus: Chorus): string[] {
+export function unknownClaims(
+  text: string,
+  chorus: Chorus,
+  answers: string[] = [],
+): string[] {
   const day = new Date(`${chorus.day}T00:00:00Z`);
   const source = normalize(
     [
@@ -120,6 +125,7 @@ export function unknownClaims(text: string, chorus: Chorus): string[] {
       chorus.localTime,
       WEEKDAY.format(day),
       MONTH.format(day),
+      ...answers,
     ].join(" "),
   );
   const digits = source.replace(/[,\s]/g, "");
@@ -194,6 +200,7 @@ export function checkPost(
   service: string,
   organizer: string,
   approved: Approved[] = [],
+  answers: string[] = [],
 ): CheckResult {
   const length = lengthFor(service, text);
   const limit = limitOf(service);
@@ -250,7 +257,7 @@ export function checkPost(
     });
   }
 
-  const claims = unknownClaims(text, chorus);
+  const claims = unknownClaims(text, chorus, answers);
   if (claims.length) {
     checks.push({
       level: "warn",

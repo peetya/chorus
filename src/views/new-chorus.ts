@@ -1,5 +1,12 @@
-import { addDays, type ChorusInput, LIMITS, TONES } from "../choruses.ts";
+import {
+  addDays,
+  type Chorus,
+  type ChorusInput,
+  LIMITS,
+  TONES,
+} from "../choruses.ts";
 import { type Html, html, raw } from "../html.ts";
+import { showDay } from "./labels.ts";
 
 const REMOVE_ICON = raw(
   '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
@@ -131,4 +138,23 @@ ${tones}
 </section>
 </aside>
 </div>`;
+}
+
+// open: the person's own Chorus that isn't over yet. null: new Choruses are paused for everyone.
+export function cantStart(open: Chorus | null): Html {
+  return html`<div class="page-head">
+  <a href="/me" class="back">My Choruses</a>
+  <h1>${open ? "One Chorus at a time" : "New Choruses are paused"}</h1>
+</div>
+<section class="box narrow-box">
+${
+  open
+    ? html`<p>You already have a Chorus coming up: <strong>${open.title}</strong>, on ${showDay(open.day)}. You can start a new one the day after it's over.</p>
+<p class="muted">Buffer's API has a daily limit for the whole app, so each person runs one Chorus at a time.</p>
+<a href="/c/${open._id}" class="button primary">Open your Chorus</a>`
+    : html`<p>Starting a new Chorus is paused for now, so the Chorus that's running gets all of Buffer's daily API limit. Joining a Chorus works as usual.</p>
+<p class="muted">Try again in a day or two.</p>
+<a href="/me" class="button">Back to My Choruses</a>`
+}
+</section>`;
 }

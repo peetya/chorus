@@ -15,12 +15,14 @@ import {
 import { type CheckResult, checkPost } from "./checks.ts";
 import {
   type Chorus,
+  canCreate,
   chorusesById,
   createChorus,
   getChorus,
   isLive,
   isOver,
   listOwned,
+  openChorusOf,
   parseChorus,
 } from "./choruses.ts";
 import { deleteUserData, tokensGoOn } from "./cleanup.ts";
@@ -58,7 +60,7 @@ import { chorusNotFound, chorusPage } from "./views/chorus.ts";
 import { joinPage } from "./views/join.ts";
 import { shortName } from "./views/labels.ts";
 import { myChoruses } from "./views/my-choruses.ts";
-import { newChorusForm } from "./views/new-chorus.ts";
+import { cantStart, newChorusForm } from "./views/new-chorus.ts";
 import { reviewPage } from "./views/review.ts";
 import { finishedPage, wallList, wallPage } from "./views/wall.ts";
 import { aiPage, checkList, writePage } from "./views/write.ts";
@@ -162,9 +164,20 @@ pages.post(
   },
 );
 
-pages.get("/new", (req, res) => {
+// The page that says why someone can't start a Chorus now, or null when they can.
+async function startBlocked(session: Session) {
+  const open = await openChorusOf(session.userId);
+  if (canCreate() && !open) return null;
+  return page("Start a Chorus", cantStart(canCreate() ? open : null), {
+    viewer: viewer(session),
+  });
+}
+
+pages.get("/new", async (req, res) => {
   const session = readSession(req);
   if (!session) return res.redirect("/login");
+  const blocked = await startBlocked(session);
+  if (blocked) return res.send(blocked);
   res.send(
     page("Start a Chorus", newChorusForm({}, []), {
       viewer: viewer(session),
@@ -179,6 +192,8 @@ pages.post(
   async (req, res) => {
     const session = readSession(req);
     if (!session) return res.redirect(303, "/login");
+    const blocked = await startBlocked(session);
+    if (blocked) return res.status(409).send(blocked);
     const { input, errors } = parseChorus(req.body ?? {});
     if (errors.length) {
       return res.status(400).send(

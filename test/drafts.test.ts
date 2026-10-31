@@ -3,7 +3,12 @@ import { test } from "node:test";
 import { addDays } from "../src/choruses.ts";
 import { scheduled } from "../src/mock.ts";
 import { DRAFT_CHECKS, posts } from "../src/posts.ts";
-import { listen, mockSession, useTestDb } from "./server.ts";
+import {
+  finishOpenChoruses,
+  listen,
+  mockSession,
+  useTestDb,
+} from "./server.ts";
 
 process.env.BUFFER_MOCK = "1";
 process.env.SESSION_SECRET = "a".repeat(32);
@@ -26,6 +31,7 @@ function post(
 
 async function startChorus(base: string) {
   const owner = await mockSession(base, "mock_zsofia");
+  await finishOpenChoruses();
   const res = await post(base, "/new", owner, [
     ["title", "Northwind ships Tally 2.0"],
     ["facts", "Tally 2.0 is out today."],

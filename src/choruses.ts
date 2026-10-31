@@ -174,6 +174,17 @@ export async function createChorus(
   return chorus;
 }
 
+// Buffer allows 500 API calls a day for the whole app, so each person runs one Chorus at a time, and
+// CHORUS_CREATE=off pauses new ones while a big wave needs the budget.
+export function canCreate(): boolean {
+  return process.env.CHORUS_CREATE !== "off";
+}
+
+// Not over yet: see isOver. Two Choruses started in the same second can both get through; rare enough.
+export async function openChorusOf(ownerId: string): Promise<Chorus | null> {
+  return (await choruses()).findOne({ ownerId, day: { $gte: addDays(-1) } });
+}
+
 export async function listOwned(ownerId: string): Promise<Chorus[]> {
   return (await choruses()).find({ ownerId }).sort({ day: 1 }).toArray();
 }

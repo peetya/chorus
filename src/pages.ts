@@ -31,6 +31,7 @@ import {
   claimCheck,
   claimForScheduling,
   claimForWithdraw,
+  deletedInBuffer,
   draftScheduled,
   dueForCheck,
   findPost,
@@ -200,7 +201,9 @@ async function runDueChecks(chorusId: string) {
           await getAccessToken(post.userId),
           post.bufferPostId,
         );
-        if (sent.status === "sent") {
+        if (!sent) {
+          await deletedInBuffer(post._id, post.status);
+        } else if (sent.status === "sent") {
           await markSent(post._id, sent.externalLink);
         } else if (
           post.status === "drafted" &&

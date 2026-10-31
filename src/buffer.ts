@@ -121,6 +121,16 @@ type GraphqlResponse<T> = {
   errors?: { message: string; extensions?: { code?: string } }[];
 };
 
+// code is Buffer's GraphQL error code, like NOT_FOUND, or the HTTP status when there was none.
+export class BufferApiError extends Error {
+  code: string;
+
+  constructor(code: string, message: string) {
+    super(`Buffer API error: ${code} ${message}`.trim());
+    this.code = code;
+  }
+}
+
 // Mock mode answers from fake people instead of Buffer (see mock.ts). Never in production.
 export function isMock(): boolean {
   if (process.env.BUFFER_MOCK !== "1") return false;
@@ -152,7 +162,7 @@ export async function graphql<T>(
   const error = json?.errors?.[0];
   if (!res.ok || error || !json?.data) {
     const code = error?.extensions?.code ?? `HTTP ${res.status}`;
-    throw new Error(`Buffer API error: ${code} ${error?.message ?? ""}`.trim());
+    throw new BufferApiError(code, error?.message ?? "");
   }
   return json.data;
 }
@@ -225,16 +235,25 @@ export type BufferPost = {
   error: { message: string } | null;
 };
 
+const isNotFound = (err: unknown) =>
+  err instanceof BufferApiError && err.code === "NOT_FOUND";
+
+// null when the post is gone: the person deleted it in Buffer.
 export async function getPost(
   accessToken: string,
   id: string,
-): Promise<BufferPost> {
-  const { post } = await graphql<{ post: BufferPost }>(
-    accessToken,
-    POST_STATUS,
-    { input: { id } },
-  );
-  return post;
+): Promise<BufferPost | null> {
+  try {
+    const { post } = await graphql<{ post: BufferPost }>(
+      accessToken,
+      POST_STATUS,
+      { input: { id } },
+    );
+    return post;
+  } catch (err) {
+    if (isNotFound(err)) return null;
+    throw err;
+  }
 }
 
 // Some networks refuse a post without their own metadata. Google Business goes under "google".
@@ -300,10 +319,16 @@ export async function deletePost(
   accessToken: string,
   id: string,
 ): Promise<string | null> {
-  const { deletePost: result } = await graphql<{
-    deletePost: { id?: string; message?: string };
-  }>(accessToken, DELETE_POST, { input: { id } });
-  return result.id
-    ? null
-    : (result.message ?? "Buffer didn't delete the post.");
+  try {
+    const { deletePost: result } = await graphql<{
+      deletePost: { id?: string; message?: string };
+    }>(accessToken, DELETE_POST, { input: { id } });
+    return result.id
+      ? null
+      : (result.message ?? "Buffer didn't delete the post.");
+  } catch (err) {
+    // Already deleted in Buffer is what a withdraw wants anyway.
+    if (isNotFound(err)) return null;
+    throw err;
+  }
 }

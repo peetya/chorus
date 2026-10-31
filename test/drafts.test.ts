@@ -134,6 +134,27 @@ test("a draft scheduled from Buffer becomes a scheduled post at Buffer's time", 
   );
 });
 
+test("a draft deleted in Buffer comes back to the editor", async (t) => {
+  const base = await listen(t);
+  const path = await startChorus(base);
+  const text = "Ravi's draft, deleted in Buffer. #TallyLaunch";
+  const ravi = await drafted(base, path, "mock_ravi", "ch_ravi_x", text);
+  const saved = await postOf(path, "ch_ravi_x");
+  scheduled.delete(saved?.bufferPostId ?? "");
+
+  await checkDueNow(path, "ch_ravi_x");
+  await fetch(`${base}${path}`);
+  const after = await postOf(path, "ch_ravi_x");
+  assert.equal(after?.status, "drafting");
+  assert.equal(after?.text, text);
+  assert.equal(after?.bufferPostId, undefined);
+  assert.equal(after?.nextCheckAt, undefined);
+  const page = await (
+    await fetch(`${base}${path}`, { headers: { cookie: ravi } })
+  ).text();
+  assert.match(page, /Edit your post/);
+});
+
 test("a draft can be taken back any time, and counts for near-duplicates", async (t) => {
   const base = await listen(t);
   const path = await startChorus(base);

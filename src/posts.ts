@@ -280,6 +280,18 @@ export async function backToDraft(id: string, lastError?: string) {
   );
 }
 
+// The person deleted it in Buffer, so it's theirs to edit again. Only if nothing changed it meanwhile,
+// like a withdraw in progress.
+export async function deletedInBuffer(id: string, status: Post["status"]) {
+  await (await posts()).updateOne(
+    { _id: id, status },
+    {
+      $set: { status: "drafting" },
+      $unset: { bufferPostId: "", dueAt: "", nextCheckAt: "" },
+    },
+  );
+}
+
 // Only well before it goes out: deleting it at the last minute could remove a live post. A draft
 // doesn't go out, so it can come back any time.
 export async function claimForWithdraw(

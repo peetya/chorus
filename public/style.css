@@ -204,6 +204,33 @@ button {
   background: #fff;
 }
 
+.button.busy {
+  gap: 10px;
+  cursor: progress;
+}
+
+.button.busy::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button.busy::before {
+    animation-duration: 2.4s;
+  }
+}
+
 .button.primary {
   background: var(--accent);
   border-color: var(--accent);
@@ -414,6 +441,16 @@ input.mono {
 
 .errors ul {
   padding-left: 20px;
+}
+
+.notice {
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 0;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 600;
 }
 
 /* The form with the fact card next to it */

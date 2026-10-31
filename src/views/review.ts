@@ -73,8 +73,10 @@ ${checkList(result)}
   ${zoneField(post)}
   <div class="actions inline">
     <button type="submit" class="button primary">Schedule it in Buffer</button>
-    <a href="/c/${chorus._id}/post" class="button">Back to editing</a>
+    <button type="submit" name="as" value="draft" class="button">Save to my Buffer drafts instead</button>
+    <a href="/c/${chorus._id}/post" class="link">Back to editing</a>
   </div>
+  <span class="hint">A draft isn't published. Schedule or post it from Buffer when you're ready, and this Chorus follows what you do there.</span>
 </form>`
   }
 </div>`;

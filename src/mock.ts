@@ -119,7 +119,13 @@ export function mockTokens(personId: string): Tokens {
 // Posts the mock "scheduled", so a delete can be checked against them. Gone when the server restarts.
 export const scheduled = new Map<
   string,
-  { id: string; dueAt: string; owner: string; channelId: string }
+  {
+    id: string;
+    dueAt: string;
+    owner: string;
+    channelId: string;
+    draft: boolean;
+  }
 >();
 
 // A post on this channel fails when it's due, so a failed post can be tried on the wall.
@@ -171,6 +177,7 @@ export function mockGraphql(
       channelId: string;
       text: string;
       dueAt: string;
+      saveToDraft?: boolean;
     };
     if (!person.channels.some((c) => c.id === input.channelId)) {
       return { createPost: { message: "Channel not found" } };
@@ -185,8 +192,10 @@ export function mockGraphql(
       ...post,
       owner: person.id,
       channelId: input.channelId,
+      draft: Boolean(input.saveToDraft),
     });
-    return { createPost: { post: { ...post, status: "scheduled" } } };
+    const status = input.saveToDraft ? "draft" : "scheduled";
+    return { createPost: { post: { ...post, status } } };
   }
   if (operation === "DeletePost") {
     const { id } = (variables?.input ?? {}) as { id?: string };
@@ -202,16 +211,33 @@ export function mockGraphql(
     if (known && known.owner !== person.id) {
       throw new Error("Buffer API error: FORBIDDEN (mock)");
     }
+    // Like Buffer, a draft stays a draft.
+    if (known?.draft) {
+      return {
+        post: {
+          status: "draft",
+          dueAt: known.dueAt,
+          externalLink: null,
+          error: null,
+        },
+      } satisfies { post: BufferPost };
+    }
     // A post from before a restart is unknown: call it sent.
     if (known && Date.parse(known.dueAt) > Date.now()) {
       return {
-        post: { status: "scheduled", externalLink: null, error: null },
+        post: {
+          status: "scheduled",
+          dueAt: known.dueAt,
+          externalLink: null,
+          error: null,
+        },
       } satisfies { post: BufferPost };
     }
     if (known?.channelId === FAILING_CHANNEL) {
       return {
         post: {
           status: "error",
+          dueAt: known.dueAt,
           externalLink: null,
           error: { message: "Bluesky didn't accept the post (mock)" },
         },
@@ -220,6 +246,7 @@ export function mockGraphql(
     return {
       post: {
         status: "sent",
+        dueAt: known?.dueAt ?? null,
         externalLink: `https://example.com/mock/${id}`,
         error: null,
       },

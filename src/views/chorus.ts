@@ -32,6 +32,11 @@ ${
     : html`<p class="muted small">It goes out in a few minutes, so it can't be changed now.</p>`
 }`;
   }
+  if (post?.status === "drafted") {
+    return html`<p class="pill accent">In your Buffer drafts</p>
+<p class="joined">Your post is in the drafts of ${post.channelName} (${serviceName(post.channelService)}), and nothing is published. Schedule or post it from Buffer when you're ready. This page checks about once an hour.</p>
+<form method="post" action="/c/${chorus._id}/post/withdraw"><button type="submit" class="button">Take it out of Buffer to change it</button></form>`;
+  }
   if (post?.status === "scheduling" || post?.status === "withdrawing") {
     return html`<p>Talking to Buffer. Reload in a moment.</p>`;
   }
@@ -68,6 +73,7 @@ function standing(post: Post): Standing {
 
 function statusLabel(post: Post): string {
   if (post.status === "sent") return "Posted";
+  if (post.status === "drafted") return "In Buffer drafts";
   const labels = { ready: "Ready", look: "Needs a look", drafting: "" };
   return labels[standing(post)] || (post.text ? "Drafting" : "Not started");
 }

@@ -15,10 +15,12 @@ export type Post = {
   savedAt?: Date;
   // "scheduling" and "withdrawing" hold the post while Buffer is asked, so a double click can't
   // create two Buffer posts or delete one twice.
+  // "drafted": in the person's Buffer drafts. They schedule or post it from Buffer, and the checks follow.
   status:
     | "drafting"
     | "scheduling"
     | "scheduled"
+    | "drafted"
     | "withdrawing"
     | "sent"
     | "failed";
@@ -101,7 +103,7 @@ export async function approvedByOthers(
     .find({
       chorusId,
       userId: { $ne: userId },
-      status: { $in: ["scheduling", "scheduled", "sent"] },
+      status: { $in: ["scheduling", "scheduled", "drafted", "sent"] },
       text: { $exists: true },
     })
     .toArray();
@@ -192,9 +194,44 @@ export async function markScheduled(
   );
 }
 
+// A draft can wait in Buffer for days, so it gets more checks, spaced out: at most this many, once an
+// hour, and every 15 minutes in the hour around its time. The API budget is 500 calls a day for everyone.
+export const DRAFT_CHECKS = 12;
+
+function draftCheckAt(dueAt: Date | undefined, checksDone: number) {
+  if (checksDone >= DRAFT_CHECKS) return undefined;
+  const now = Date.now();
+  const close = dueAt && Math.abs(dueAt.getTime() - now) < 60 * 60_000;
+  return new Date(now + (close ? 15 : 60) * 60_000);
+}
+
+export async function markDrafted(
+  id: string,
+  bufferPostId: string,
+  dueAt: Date,
+) {
+  await (await posts()).updateOne(
+    { _id: id },
+    {
+      $set: {
+        status: "drafted",
+        bufferPostId,
+        dueAt,
+        statusChecks: 0,
+        nextCheckAt: draftCheckAt(dueAt, 0),
+      },
+      $unset: { lockedAt: "" },
+    },
+  );
+}
+
 export async function dueForCheck(chorusId: string): Promise<Post[]> {
   return (await posts())
-    .find({ chorusId, status: "scheduled", nextCheckAt: { $lte: new Date() } })
+    .find({
+      chorusId,
+      status: { $in: ["scheduled", "drafted"] },
+      nextCheckAt: { $lte: new Date() },
+    })
     .limit(10)
     .toArray();
 }
@@ -202,9 +239,12 @@ export async function dueForCheck(chorusId: string): Promise<Post[]> {
 // Only one wall request gets each check: the update matches only while nobody else counted it yet.
 export async function claimCheck(post: Post): Promise<boolean> {
   const done = post.statusChecks + 1;
-  const next = post.dueAt && checkAt(post.dueAt, done);
+  const next =
+    post.status === "drafted"
+      ? draftCheckAt(post.dueAt, done)
+      : post.dueAt && checkAt(post.dueAt, done);
   const { modifiedCount } = await (await posts()).updateOne(
-    { _id: post._id, status: "scheduled", statusChecks: post.statusChecks },
+    { _id: post._id, status: post.status, statusChecks: post.statusChecks },
     next
       ? { $inc: { statusChecks: 1 }, $set: { nextCheckAt: next } }
       : { $inc: { statusChecks: 1 }, $unset: { nextCheckAt: "" } },
@@ -240,7 +280,8 @@ export async function backToDraft(id: string, lastError?: string) {
   );
 }
 
-// Only well before it goes out: deleting it at the last minute could remove a live post.
+// Only well before it goes out: deleting it at the last minute could remove a live post. A draft
+// doesn't go out, so it can come back any time.
 export async function claimForWithdraw(
   chorusId: string,
   userId: string,
@@ -249,17 +290,41 @@ export async function claimForWithdraw(
     {
       chorusId,
       userId,
-      status: "scheduled",
-      dueAt: { $gt: new Date(Date.now() + WITHDRAW_BEFORE_MS) },
+      $or: [
+        {
+          status: "scheduled",
+          dueAt: { $gt: new Date(Date.now() + WITHDRAW_BEFORE_MS) },
+        },
+        { status: "drafted" },
+      ],
     },
     { $set: { status: "withdrawing", lockedAt: new Date() } },
-    { returnDocument: "after" },
+    { returnDocument: "before" },
   );
 }
 
-export async function stillScheduled(id: string) {
+// The person scheduled their draft in Buffer: from now on it's checked like any scheduled post.
+export async function draftScheduled(id: string, dueAt: Date) {
+  await (await posts()).updateOne(
+    { _id: id, status: "drafted" },
+    {
+      $set: {
+        status: "scheduled",
+        dueAt,
+        statusChecks: 0,
+        nextCheckAt: checkAt(dueAt, 0),
+      },
+    },
+  );
+}
+
+// Back to what it was in Buffer, after a withdraw that didn't happen.
+export async function stillScheduled(
+  id: string,
+  status: "scheduled" | "drafted",
+) {
   await (await posts()).updateOne(
     { _id: id },
-    { $set: { status: "scheduled" }, $unset: { lockedAt: "" } },
+    { $set: { status }, $unset: { lockedAt: "" } },
   );
 }

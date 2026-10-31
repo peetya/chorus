@@ -214,12 +214,13 @@ const DELETE_POST = `mutation DeletePost($input: DeletePostInput!) {
 }`;
 
 const POST_STATUS = `query PostStatus($input: PostInput!) {
-  post(input: $input) { status externalLink error { message } }
+  post(input: $input) { status dueAt externalLink error { message } }
 }`;
 
 // status is one of draft, needs_approval, scheduled, sending, sent, error.
 export type BufferPost = {
   status: string;
+  dueAt: string | null; // changes when the person schedules a draft in Buffer
   externalLink: string | null;
   error: { message: string } | null;
 };
@@ -268,6 +269,7 @@ export async function createPost(
     text: string;
     dueAt: Date;
     aiAssisted: boolean;
+    saveToDraft: boolean; // the post lands in the person's Buffer drafts, not the queue
   },
 ): Promise<Scheduled> {
   const { createPost: result } = await graphql<{
@@ -282,6 +284,7 @@ export async function createPost(
       assets: [],
       needsApproval: false,
       aiAssisted: post.aiAssisted,
+      saveToDraft: post.saveToDraft,
       metadata: metadataFor(post.service, post.text),
     },
   });

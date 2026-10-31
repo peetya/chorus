@@ -4,6 +4,7 @@ import { once } from "node:events";
 import type { AddressInfo } from "node:net";
 import { after, type TestContext } from "node:test";
 import app from "../src/app.ts";
+import { addDays, choruses } from "../src/choruses.ts";
 import { closeDb, db } from "../src/db.ts";
 
 // Starts the app on a free port for one test and stops it afterwards.
@@ -41,4 +42,12 @@ export async function mockSession(base: string, person: string) {
     redirect: "manual",
   });
   return cookieFrom(res, "chorus_session").split(";")[0];
+}
+
+// Each person runs one Chorus at a time. Tests that start another one first move the open ones into the past.
+export async function finishOpenChoruses() {
+  await (await choruses()).updateMany(
+    { day: { $gte: addDays(-1) } },
+    { $set: { day: addDays(-30) } },
+  );
 }

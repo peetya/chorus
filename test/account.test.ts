@@ -81,6 +81,11 @@ test("the account page says when the connection goes, and disconnect works", asy
   assert.match(after, />Not connected</);
 
   // A page that needs Buffer now asks to sign in again instead of failing.
+  // One open Chorus per person: the first one is over (but not cleaned up yet) before she starts another.
+  await (await choruses()).updateOne(
+    { _id: path.slice(3) },
+    { $set: { day: addDays(-2) } },
+  );
   const fresh = await startChorus(base, zsofia, addDays(20));
   const join2 = await fetch(`${base}${fresh}/join`, {
     headers: { cookie: zsofia },

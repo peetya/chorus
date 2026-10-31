@@ -1,4 +1,4 @@
-import { addDays, type Chorus, isLive } from "../choruses.ts";
+import { addDays, type Chorus, canCreate, isLive } from "../choruses.ts";
 import { type Html, html } from "../html.ts";
 import { shortName, showDay } from "./labels.ts";
 
@@ -53,7 +53,7 @@ export function myChoruses(items: MyChorus[]): Html {
   const done = items.filter(({ chorus }) => chorus.day < yesterday).reverse();
   return html`<div class="page-head row-head">
   <h1>My Choruses</h1>
-  <a href="/new" class="button primary">Start a Chorus</a>
+  ${canCreate() && html`<a href="/new" class="button primary">Start a Chorus</a>`}
 </div>
 ${items.length === 0 && html`<p class="empty">No Choruses yet. Start one, then share its invite link with everyone who should post.</p>`}
 ${group("Live now", live, false)}

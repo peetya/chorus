@@ -3,7 +3,12 @@ import { test } from "node:test";
 import { safeNext } from "../src/auth.ts";
 import { addDays, type Chorus, choruses, getChorus } from "../src/choruses.ts";
 import { postsOf } from "../src/posts.ts";
-import { listen, mockSession, useTestDb } from "./server.ts";
+import {
+  finishOpenChoruses,
+  listen,
+  mockSession,
+  useTestDb,
+} from "./server.ts";
 
 process.env.BUFFER_MOCK = "1";
 process.env.SESSION_SECRET = "a".repeat(32);
@@ -22,6 +27,7 @@ function post(base: string, path: string, cookie: string, fields: string[][]) {
 // Zsófia starts a Chorus and returns its page path, like "/c/AE1lcZZs".
 async function startChorus(base: string, day = addDays(14)): Promise<string> {
   const cookie = await mockSession(base, "mock_zsofia");
+  await finishOpenChoruses();
   const res = await post(base, "/new", cookie, [
     ["title", "Northwind ships Tally 2.0"],
     ["note", "Let's tell it together."],

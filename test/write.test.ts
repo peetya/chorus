@@ -3,7 +3,12 @@ import { test } from "node:test";
 import { addDays } from "../src/choruses.ts";
 import { findPost } from "../src/posts.ts";
 import { users } from "../src/users.ts";
-import { listen, mockSession, useTestDb } from "./server.ts";
+import {
+  finishOpenChoruses,
+  listen,
+  mockSession,
+  useTestDb,
+} from "./server.ts";
 
 process.env.BUFFER_MOCK = "1";
 process.env.SESSION_SECRET = "a".repeat(32);
@@ -22,6 +27,7 @@ function post(base: string, path: string, cookie: string, fields: string[][]) {
 // Zsófia starts a Chorus and Ravi joins it with his X channel. Returns the Chorus path and Ravi's cookie.
 async function joined(base: string) {
   const owner = await mockSession(base, "mock_zsofia");
+  await finishOpenChoruses();
   const created = await post(base, "/new", owner, [
     ["title", "Northwind ships Tally 2.0"],
     ["facts", "Tally 2.0 is out today."],

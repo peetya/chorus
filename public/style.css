@@ -759,6 +759,15 @@ input.mono {
   overflow-wrap: anywhere;
 }
 
+.narrow-box {
+  max-width: 640px;
+  align-items: flex-start;
+}
+
+.narrow-box p {
+  margin: 0;
+}
+
 .brief-cards > .box {
   flex: 1 1 300px;
 }

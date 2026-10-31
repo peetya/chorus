@@ -1,3 +1,4 @@
+import { canCreate } from "../choruses.ts";
 import { type Html, html } from "../html.ts";
 import type { Post } from "../posts.ts";
 import { localTime, utcOffset } from "../time.ts";
@@ -137,7 +138,7 @@ export function finishedPage(view: ChorusView): Html {
 <div class="actions inline">
   <input id="link" type="text" readonly value="${inviteUrl}" class="mono finished-link" aria-label="Link to this page">
   <button type="button" class="button" data-copy="link">Copy link</button>
-  <a href="/new" class="button primary">Start your own Chorus</a>
+  ${canCreate() && html`<a href="/new" class="button primary">Start your own Chorus</a>`}
 </div>
 ${
   sent.length > 0 &&

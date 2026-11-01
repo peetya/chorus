@@ -1573,7 +1573,8 @@ a.finished-post:hover {
 
 .crops > div {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: start;
   gap: 8px;
 }
 
@@ -1685,8 +1686,11 @@ a.finished-post:hover {
   gap: 6px;
 }
 
+/* The 4:5 Instagram crop would be taller than a phone screen at full width. */
 .image-preview img {
-  width: 100%;
+  align-self: flex-start;
+  max-width: 100%;
+  max-height: 360px;
   border-radius: 10px;
 }
 

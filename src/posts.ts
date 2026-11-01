@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Answer } from "./ai.ts";
 import type { Channel } from "./buffer.ts";
 import { collection } from "./db.ts";
+import { needsImage } from "./images.ts";
 
 // One per person in a Chorus, with one channel each. The text, the time and the Buffer post come later.
 export type Post = {
@@ -163,7 +164,19 @@ export async function joinedBy(userId: string): Promise<Post[]> {
 }
 
 // Buffer can't post from these, so joining with them would fail on the day.
-export function channelProblem(channel: Channel): string | null {
+// Pinterest needs a pin, TikTok and YouTube a video: a post with text and an image isn't enough.
+const NOT_SUPPORTED = ["pinterest", "tiktok", "youtube"];
+
+export function channelProblem(
+  channel: Channel,
+  hasImages: boolean,
+): string | null {
+  if (NOT_SUPPORTED.includes(channel.service)) {
+    return "Chorus can't post here: this network needs a pin or a video.";
+  }
+  if (needsImage(channel.service) && !hasImages) {
+    return "Instagram posts need an image, and this Chorus has none.";
+  }
   if (channel.isDisconnected) return "Reconnect this channel in Buffer first.";
   if (channel.isLocked) {
     return "This channel is locked in Buffer, usually because of your plan's channel limit.";

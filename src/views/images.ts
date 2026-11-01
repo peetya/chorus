@@ -6,6 +6,7 @@ import {
   imageFor,
   MAX_ALT,
   MAX_IMAGES,
+  needsImage,
 } from "../images.ts";
 import type { Post } from "../posts.ts";
 import { serviceName, shortName } from "./labels.ts";
@@ -14,7 +15,14 @@ const CROP_LABELS: [Crop, string][] = [
   ["linkedin", "LinkedIn · 1.91:1"],
   ["wide", "X · 16:9"],
   ["wide", "Bluesky · 16:9"],
+  ["portrait", "Instagram · 4:5"],
 ];
+
+const RATIOS: Partial<Record<Crop, string>> = {
+  linkedin: "1.91:1",
+  wide: "16:9",
+  portrait: "4:5",
+};
 
 const percent = (n: number) => `${Math.round(n * 1000) / 10}%`;
 
@@ -71,11 +79,8 @@ ${images.map(formImageCard)}
 }
 
 function previewHint(service: string, organizer: string): string {
-  const crop = cropFor(service);
-  if (crop === "original") {
-    return `${serviceName(service)} gets the whole image.`;
-  }
-  const ratio = crop === "linkedin" ? "1.91:1" : "16:9";
+  const ratio = RATIOS[cropFor(service)];
+  if (!ratio) return `${serviceName(service)} gets the whole image.`;
   return `Cropped to ${ratio} for ${serviceName(service)}. Chorus keeps the spot ${shortName(organizer)} marked in view.`;
 }
 
@@ -90,9 +95,16 @@ export function imagePicker(
   const current = imageFor(images, post);
   const crop = cropFor(post.channelService);
   const network = serviceName(post.channelService);
+  const required = needsImage(post.channelService);
+  const choice =
+    images.length > 1
+      ? "We picked one for you, so the posts don't all look the same. Pick another one if you like."
+      : required
+        ? `Your post goes out with it: ${network} needs an image.`
+        : "Your post goes out with it, or without an image if you like.";
   return html`<fieldset class="image-pick">
   <legend>Image</legend>
-  <p class="muted">${shortName(organizer)} added ${images.length === 1 ? "an image" : `${images.length} images`}. ${images.length > 1 ? "We picked one for you, so the posts don't all look the same. Pick another one if you like." : "Your post goes out with it, or without an image if you like."}</p>
+  <p class="muted">${shortName(organizer)} added ${images.length === 1 ? "an image" : `${images.length} images`}. ${choice}</p>
   <div class="image-pick-row">
     <div class="image-options">
     ${images.map(
@@ -101,10 +113,13 @@ export function imagePicker(
       <span><input type="radio" name="image" value="${i}"${image === current && " checked"}> Image ${i + 1}</span>
     </label>`,
     )}
-      <label class="image-option">
+      ${
+        !required &&
+        html`<label class="image-option">
         <span class="no-image">Post without an image</span>
         <span><input type="radio" name="image" value="none"${!current && " checked"}> No image</span>
-      </label>
+      </label>`
+      }
     </div>
     <div class="image-preview">
       <span class="small-label">How it looks on ${network}</span>

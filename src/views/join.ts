@@ -8,12 +8,15 @@ export function joinPage(
   chorus: Chorus,
   channels: Channel[],
   chosen: string | undefined,
+  hasImages: boolean,
   error?: string,
 ): Html {
-  const usable = channels.filter((channel) => !channelProblem(channel));
+  const usable = channels.filter(
+    (channel) => !channelProblem(channel, hasImages),
+  );
   const selected = chosen ?? usable[0]?.id;
   const options = channels.map((channel) => {
-    const problem = channelProblem(channel);
+    const problem = channelProblem(channel, hasImages);
     return html`<label class="channel${problem && " blocked"}">
   <input type="radio" name="channelId" value="${channel.id}"${channel.id === selected && !problem && " checked"}${problem && " disabled"}>
   <span class="channel-text">

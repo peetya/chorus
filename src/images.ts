@@ -12,10 +12,14 @@ export const MAX_BYTES = 4 * 1024 * 1024;
 export const MAX_ALT = 1000; // X allows 1,000 characters of alt text, the lowest of the networks
 
 // LinkedIn shows link and image posts at 1.91:1; X and Bluesky at 16:9, so they share one crop.
+// Instagram takes 4:5 to 1.91:1 and at most 1440 px wide, and Buffer turns anything else into a
+// reminder instead of posting it. 4:5 is the biggest it shows in the feed.
 export const CROPS = {
   linkedin: { width: 1200, height: 627 },
   wide: { width: 1600, height: 900 },
+  portrait: { width: 1080, height: 1350 },
 };
+
 const ORIGINAL_MAX = 2048; // what every other network gets, uncropped
 
 export type Crop = keyof typeof CROPS | "original";
@@ -103,7 +107,11 @@ export async function makeCrops(original: Buffer, focus: Focus) {
       .resize(w, h)
       .jpeg({ quality: 85 })
       .toBuffer();
-  return { linkedin: await crop(CROPS.linkedin), wide: await crop(CROPS.wide) };
+  return {
+    linkedin: await crop(CROPS.linkedin),
+    wide: await crop(CROPS.wide),
+    portrait: await crop(CROPS.portrait),
+  };
 }
 
 // Each image has its own folder, so assigning it to a Chorus is a database change and no file moves. Each
@@ -120,6 +128,7 @@ async function saveCrops(imageId: string, original: Buffer, focus: Focus) {
   return {
     linkedin: await saveIn(imageId, crops.linkedin),
     wide: await saveIn(imageId, crops.wide),
+    portrait: await saveIn(imageId, crops.portrait),
   };
 }
 
@@ -249,15 +258,23 @@ export async function deleteImages(filter: Filter<ImageDoc>): Promise<number> {
 export function cropFor(service: string): Crop {
   if (service === "linkedin") return "linkedin";
   if (service === "twitter" || service === "bluesky") return "wide";
+  if (service === "instagram") return "portrait";
   return "original";
 }
 
-// The image a post goes out with. imageIndex counts round the images. null is "No image".
+// Instagram has no posts without an image.
+export function needsImage(service: string): boolean {
+  return service === "instagram";
+}
+
+// The image a post goes out with. imageIndex counts round the images. null is "No image", except where
+// the network needs one.
 export function imageFor(
   images: ChorusImage[],
   post: Post,
 ): ChorusImage | null {
-  if (post.imageIndex === null || images.length === 0) return null;
+  if (images.length === 0) return null;
+  if (post.imageIndex === null && !needsImage(post.channelService)) return null;
   return images[(post.imageIndex ?? 0) % images.length];
 }
 

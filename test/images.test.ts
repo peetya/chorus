@@ -161,6 +161,7 @@ test("an upload is checked by its bytes and its size, and cropped for each netwo
   assert.deepEqual(image.focus, { x: 0.5, y: 0.5 });
   assert.equal(await size(image.urls.linkedin), "1200x627");
   assert.equal(await size(image.urls.wide), "1600x900");
+  assert.equal(await size(image.urls.portrait), "1080x1350");
   assert.equal(await size(image.urls.original), "2000x500");
 
   // Like the rest of the brief, the images can't be changed once the Chorus is started.
@@ -412,4 +413,43 @@ test("form images never used go in the cleanup after a day", async (t) => {
   assert.ok((await dailyCleanup()).images >= 1);
   assert.equal(await (await images()).findOne({ _id: id }), null);
   assert.ok(!existsSync(`public${original}`));
+});
+
+test("Instagram always gets the 4:5 crop, and some networks can't join", async (t) => {
+  const base = await listen(t);
+  const owner = await mockSession(base, "mock_zsofia");
+  const plain = await startChorus(base, owner);
+  const chloe = await mockSession(base, "mock_chloe");
+  const noImages = await post(base, `${plain}/join`, chloe, [
+    ["channelId", "ch_chloe_ig"],
+  ]);
+  assert.equal(noImages.status, 400);
+  assert.match(await noImages.text(), /Instagram posts need an image/);
+
+  const sam = await mockSession(base, "mock_sam");
+  const pin = await post(base, `${plain}/join`, sam, [
+    ["channelId", "ch_sam_pin"],
+  ]);
+  assert.equal(pin.status, 400);
+  assert.match(await pin.text(), /needs a pin or a video/);
+
+  const path = await startChorus(base, owner, ["The only one"]);
+  const [image] = await imagesOf(path);
+  await post(base, `${path}/join`, chloe, [["channelId", "ch_chloe_ig"]]);
+  const editor = await (
+    await fetch(`${base}${path}/post`, { headers: { cookie: chloe } })
+  ).text();
+  assert.doesNotMatch(editor, /value="none"/);
+  assert.match(editor, /Cropped to 4:5 for Instagram/);
+  // "No image" sent anyway still goes out with the image.
+  await post(base, `${path}/post`, chloe, [
+    ["text", "Out today. #TallyLaunch"],
+    ["image", "none"],
+  ]);
+  await post(base, `${path}/post/approve`, chloe);
+  const sent = await (await posts()).findOne({ channelId: "ch_chloe_ig" });
+  assert.equal(
+    scheduled.get(sent?.bufferPostId ?? "")?.assets[0]?.image.url,
+    image.urls.portrait,
+  );
 });

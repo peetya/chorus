@@ -460,9 +460,18 @@ pages.get("/c/:id/join", async (req, res) => {
     return res.redirect(`/c/${chorus._id}`);
   const channels = await channelsFor(session.userId);
   res.send(
-    page("Pick your channel", joinPage(chorus, channels, post?.channelId), {
-      viewer: viewer(session),
-    }),
+    page(
+      "Pick your channel",
+      joinPage(
+        chorus,
+        channels,
+        post?.channelId,
+        (await imagesIn({ chorusId: chorus._id })).length > 0,
+      ),
+      {
+        viewer: viewer(session),
+      },
+    ),
   );
 });
 
@@ -482,14 +491,21 @@ pages.post(
     // Ask Buffer again: the browser could send any id, and a channel can change in the meantime.
     const channels = await channelsFor(session.userId);
     const channel = channels.find((c) => c.id === req.body?.channelId);
+    const hasImages = (await imagesIn({ chorusId: chorus._id })).length > 0;
     const problem = channel
-      ? channelProblem(channel)
+      ? channelProblem(channel, hasImages)
       : "Pick one of your channels.";
     if (!channel || problem) {
       return res.status(400).send(
         page(
           "Pick your channel",
-          joinPage(chorus, channels, undefined, problem ?? undefined),
+          joinPage(
+            chorus,
+            channels,
+            undefined,
+            hasImages,
+            problem ?? undefined,
+          ),
           {
             viewer: viewer(session),
           },

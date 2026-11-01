@@ -37,6 +37,7 @@ export const PEOPLE = [
     city: "Sydney",
     channels: [
       channel("ch_chloe_li", "Chloe Nguyen", "linkedin", "Australia/Sydney"),
+      channel("ch_chloe_ig", "chloe.ng", "instagram", "Australia/Sydney"),
     ],
   },
   {
@@ -86,7 +87,10 @@ export const PEOPLE = [
     id: "mock_sam",
     name: "Sam Walker",
     city: "London",
-    channels: [channel("ch_sam_li", "Sam Walker", "linkedin", "Europe/London")],
+    channels: [
+      channel("ch_sam_li", "Sam Walker", "linkedin", "Europe/London"),
+      channel("ch_sam_pin", "samwalker", "pinterest", "Europe/London"),
+    ],
   },
   {
     id: "mock_dana",

@@ -1,6 +1,9 @@
-// Refreshes the wall every minute. Asking for it also lets the server check due posts with Buffer.
-const wall = document.querySelector("[data-wall]");
+// Refreshes the wall and its map every minute. Asking for them also lets the server check due posts with
+// Buffer.
+const parts = document.querySelectorAll("[data-wall]");
 setInterval(async () => {
-  const res = await fetch(wall.dataset.wall);
-  if (res.ok) wall.innerHTML = await res.text();
+  for (const part of parts) {
+    const res = await fetch(part.dataset.wall);
+    if (res.ok) part.innerHTML = await res.text();
+  }
 }, 60_000);

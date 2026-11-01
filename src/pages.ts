@@ -59,10 +59,11 @@ import { accountPage, deletedPage } from "./views/account.ts";
 import { chorusNotFound, chorusPage } from "./views/chorus.ts";
 import { joinPage } from "./views/join.ts";
 import { shortName } from "./views/labels.ts";
+import { liveMap } from "./views/map.ts";
 import { myChoruses } from "./views/my-choruses.ts";
 import { cantStart, newChorusForm } from "./views/new-chorus.ts";
 import { reviewPage } from "./views/review.ts";
-import { finishedPage, wallList, wallPage } from "./views/wall.ts";
+import { finishedPage, scheduled, wallList, wallPage } from "./views/wall.ts";
 import { aiPage, checkList, writePage } from "./views/write.ts";
 
 export const pages = Router();
@@ -302,13 +303,13 @@ pages.get("/c/:id/wall", async (req, res) => {
   if (!chorus) return res.sendStatus(404);
   if (isLive(chorus)) await runDueChecks(chorus._id);
   const { joined, names } = await peopleIn(chorus);
-  res
-    .type("html")
-    .send(
-      wallList(
-        joined.map((post) => ({ name: names.get(post.userId) ?? "?", post })),
-      ).value,
-    );
+  const people = joined.map((post) => ({
+    name: names.get(post.userId) ?? "?",
+    post,
+  }));
+  const part =
+    "map" in req.query ? liveMap(scheduled(people)) : wallList(people);
+  res.type("html").send(part.value);
 });
 
 pages.get("/c/:id/join", async (req, res) => {

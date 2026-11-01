@@ -42,9 +42,18 @@ test("the authorize URL asks for a refresh token with S256 PKCE", () => {
   );
 });
 
+test("the sign-in page lists Buffer and keeps where to go next", async (t) => {
+  const base = await listen(t);
+  const res = await fetch(`${base}/login?next=/account`);
+  assert.equal(res.status, 200);
+  const text = await res.text();
+  assert.match(text, /href="\/login\/buffer\?next=%2Faccount"/);
+  assert.doesNotMatch(text, /href="\/login">Sign in/);
+});
+
 test("login sends the person to Buffer with a short-lived cookie", async (t) => {
   const base = await listen(t);
-  const res = await fetch(`${base}/login`, { redirect: "manual" });
+  const res = await fetch(`${base}/login/buffer`, { redirect: "manual" });
 
   assert.equal(res.status, 302);
   assert.ok(
@@ -64,7 +73,7 @@ test("a callback without a login cookie asks to sign in again", async (t) => {
 
 test("a callback with the wrong state is refused", async (t) => {
   const base = await listen(t);
-  const login = await fetch(`${base}/login`, { redirect: "manual" });
+  const login = await fetch(`${base}/login/buffer`, { redirect: "manual" });
   const cookie = cookieFrom(login, "chorus_oauth").split(";")[0];
 
   const res = await fetch(`${base}/callback?code=abc&state=not-ours`, {

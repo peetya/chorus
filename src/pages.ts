@@ -80,6 +80,7 @@ import { type ChorusView, chorusNotFound, chorusPage } from "./views/chorus.ts";
 import { formImageCard } from "./views/images.ts";
 import { joinPage } from "./views/join.ts";
 import { shortName } from "./views/labels.ts";
+import { landingPage } from "./views/landing.ts";
 import { liveMap } from "./views/map.ts";
 import { myChoruses } from "./views/my-choruses.ts";
 import { cantStart, newChorusForm } from "./views/new-chorus.ts";
@@ -96,7 +97,7 @@ import { aiPage, checkList, writePage } from "./views/write.ts";
 export const pages = Router();
 
 function viewer(session: Session) {
-  return { name: isMock() ? `${session.name} (mock mode)` : session.name };
+  return { name: session.name, mock: isMock() };
 }
 
 function notFound(res: Response, session: Session | null) {
@@ -120,6 +121,11 @@ async function channelsFor(userId: string): Promise<Channel[]> {
   }
   return getChannels(token, organizationIds);
 }
+
+pages.get("/", (req, res) => {
+  const session = readSession(req);
+  res.send(landingPage(session && viewer(session)));
+});
 
 pages.get("/me", async (req, res) => {
   const session = readSession(req);

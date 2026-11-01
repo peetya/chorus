@@ -24,6 +24,13 @@ body {
   background: #fff;
 }
 
+/* Links to a part of the page (the landing's Why, How it works, Privacy) glide there. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 a {
   color: var(--ink);
 }
@@ -105,33 +112,86 @@ main {
   text-decoration: none;
 }
 
-.who {
-  font-weight: 500;
-  color: var(--muted);
-  text-decoration: none;
-}
-
-.who-short {
-  display: none;
-}
-
 .top form {
   margin: 0;
 }
 
-/* On a phone the header stays one line: the name becomes "Account", and signing out is on that page. */
-@media (max-width: 479px) {
-  .top form {
-    display: none;
-  }
+/* The account menu: the initials open a small panel under them. */
+.menu {
+  position: relative;
+}
 
-  .who-name {
-    display: none;
-  }
+.menu-avatar {
+  width: 36px;
+  height: 36px;
+  background: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
 
-  .who-short {
-    display: inline;
-  }
+.menu-avatar::-webkit-details-marker {
+  display: none;
+}
+
+.menu-avatar:hover,
+.menu[open] .menu-avatar {
+  background: var(--accent-ink);
+}
+
+.menu-avatar:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 10;
+  min-width: 220px;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  background: #fff;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgb(21 26 38 / 0.12);
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-item {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink);
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--soft);
+  color: var(--ink);
+}
+
+.menu-who {
+  margin: 0 0 6px;
+  padding: 8px 12px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 13px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.menu-who strong {
+  color: var(--ink);
+  font-weight: 600;
 }
 
 /* Text */
@@ -1941,20 +2001,17 @@ a.finished-post:hover {
 
 /* The landing page: text on the left, the world map on the right, the map under the text on a phone */
 
-/* The dark part fills the screen, so no white strip is left under it. */
 .landing {
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
   background: #131829;
   color: #f2f4f8;
 }
 
-.landing .top a {
+.landing .brand,
+.landing .top nav > a {
   color: #f2f4f8;
 }
 
-.landing .top a:hover {
+.landing .top nav > a:hover {
   color: #fdba74;
 }
 
@@ -1967,11 +2024,8 @@ a.finished-post:hover {
 }
 
 main.landing-hero {
-  flex: 1;
-  width: 100%;
-  box-sizing: border-box;
+  padding: 36px 16px 80px;
   flex-flow: row wrap;
-  align-content: center;
   align-items: center;
   gap: 48px;
 }
@@ -1985,6 +2039,12 @@ main.landing-hero {
   flex: 2 1 640px;
   min-width: 0;
   border-radius: 0;
+  overflow: visible;
+}
+
+/* The light is clipped inside the SVG, so a bubble at the edge can stick out. */
+.hero-map svg {
+  overflow: visible;
 }
 
 @keyframes hero-band {
@@ -2086,4 +2146,499 @@ a.chorus-card.live:hover {
 .live .sun-label,
 .live .hint {
   display: none;
+}
+
+/* The landing hero's second button and its note, on the dark background */
+.button.ghost {
+  color: #f2f4f8;
+  background: transparent;
+  border-color: #4a5470;
+}
+
+.button.ghost:hover {
+  border-color: #c8ceda;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.landing .hero .hero-note {
+  font-size: 14px;
+  color: #a3abba;
+}
+
+/* The links to the landing's own sections; on a phone the header keeps only "Connect Buffer". */
+@media (max-width: 600px) {
+  .page-link {
+    display: none;
+  }
+}
+
+/* Under the landing hero: why, how it works, what stays private, and a last button */
+.landing-section {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 64px 16px 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.landing-title {
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.landing-text {
+  margin: 0;
+  color: var(--muted);
+}
+
+.num {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.why {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 48px;
+}
+
+.why-intro {
+  flex: 1 1 380px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Made to look like a message in a team chat app: square avatar, a link preview, emoji reactions, a thread. */
+.chat {
+  margin: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: #fff;
+  color: #1d1c1d;
+  box-shadow: 0 8px 24px rgb(21 26 38 / 0.06);
+  overflow: hidden;
+}
+
+.chat-message {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 16px;
+}
+
+.chat-avatar {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #4a154b;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.chat-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.chat-head {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.chat-text {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.chat-time {
+  font-size: 12px;
+  color: #616061;
+}
+
+.chat-link {
+  color: #1264a3;
+}
+
+.chat-preview {
+  margin-top: 4px;
+  border-left: 4px solid #dddddd;
+  padding: 2px 0 2px 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-preview-site {
+  font-size: 13px;
+  font-weight: 700;
+  color: #616061;
+}
+
+.chat-preview-title {
+  font-weight: 700;
+  color: #1264a3;
+}
+
+.chat-reactions {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chat-reaction {
+  font-size: 12px;
+  line-height: 1;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #f1f1f1;
+  color: #1d1c1d;
+}
+
+.chat-reaction.mine {
+  border-color: #1d9bd1;
+  background: #e8f5fa;
+  color: #1264a3;
+}
+
+.chat-thread {
+  margin: 2px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.chat-replies {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1264a3;
+}
+
+.problems {
+  flex: 1 1 460px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.problem {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.problem:first-child {
+  padding-top: 0;
+}
+
+.problem:last-child {
+  border-bottom: 0;
+}
+
+.problem .num {
+  padding-top: 4px;
+}
+
+.problem-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--muted);
+}
+
+.problem-title {
+  font-size: 18px;
+  color: var(--ink);
+}
+
+.turn {
+  background: var(--accent-soft);
+  border-radius: 20px;
+  padding: 40px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+
+.turn-title {
+  margin: 0;
+  font-family: var(--heading);
+  font-weight: 700;
+  font-size: clamp(1.4rem, 4vw, 1.75rem);
+  line-height: 1.2;
+}
+
+/* A highlighter stroke under the two phrases: part of the sentence, not something to click. */
+.turn-mark {
+  background: linear-gradient(
+    transparent 58%,
+    #fdba74 58%,
+    #fdba74 92%,
+    transparent 92%
+  );
+  color: inherit;
+  padding: 0 2px;
+}
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.step {
+  flex: 1 1 300px;
+  min-width: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.step-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.trust {
+  flex-flow: row wrap;
+  gap: 40px;
+}
+
+.trust-intro {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.promises {
+  flex: 1 1 520px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.promise {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.promise .check {
+  flex: none;
+  margin-top: 1px;
+}
+
+.cta {
+  background: var(--soft);
+  border-radius: 20px;
+  padding: 36px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.cta-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* As wide as the sections' content, so its top line lines up with them. */
+.site-footer {
+  width: calc(100% - 32px);
+  max-width: 1128px;
+  margin: 56px auto 0;
+  padding: 24px 0 40px;
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.footer-link {
+  color: var(--muted);
+}
+
+/* Sign in: the form on the left, the map on the dark side on the right, like the landing hero. On a phone
+   the map comes after the form, so the button stays near the top. */
+
+/* The map's hard edge shows the gap, so this page lines up with the header (16px) like the landing does. */
+main:has(> .sign-in) {
+  padding-inline: 16px;
+}
+
+.sign-in {
+  display: grid;
+  grid-template-columns: minmax(0, 460px) 1fr;
+  gap: 48px;
+}
+
+.sign-in-form {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+}
+
+.sign-in-form h1 {
+  text-wrap: balance;
+}
+
+.sign-in-lead {
+  margin: 0;
+  font-size: 18px;
+  color: var(--muted);
+}
+
+.joining {
+  align-items: center;
+}
+
+.joining img {
+  flex: none;
+}
+
+.joining span span,
+.joining strong {
+  display: block;
+}
+
+.joining .muted {
+  font-size: 14px;
+}
+
+/* One card per scheduling tool. Today that's only Buffer. */
+.provider {
+  margin-block: 8px 4px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 8px 24px rgb(21 26 38 / 0.06);
+}
+
+.provider-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.provider-name {
+  font-size: 24px;
+  letter-spacing: -0.01em;
+}
+
+.provider-text {
+  margin: 0;
+  color: var(--muted);
+}
+
+.provider-button {
+  margin-top: 6px;
+}
+
+.provider-free {
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+
+.sign-in-form .hint {
+  margin: 0;
+}
+
+.sign-in-form .promises {
+  flex: none;
+  gap: 10px;
+  font-size: 15px;
+}
+
+.sign-in a:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.sign-in-map {
+  background: #131829;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  padding: 40px 32px;
+}
+
+/* The light is clipped inside the SVG, so a bubble at the edge can stick out. */
+.sign-in-map .map-frame,
+.sign-in-map svg {
+  flex: 1;
+  border-radius: 0;
+  overflow: visible;
+}
+
+@media (max-width: 860px) {
+  .sign-in {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .sign-in-map {
+    padding: 20px 16px;
+  }
 }

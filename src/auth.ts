@@ -10,11 +10,12 @@ import {
   isMock,
   type Tokens,
 } from "./buffer.ts";
+import { getChorus } from "./choruses.ts";
 import { page } from "./html.ts";
 import { mockTokens, PEOPLE } from "./mock.ts";
 import { clearSealed, readSealed, writeSealed } from "./session.ts";
 import { saveUser } from "./users.ts";
-import { mockSignIn, signInProblem } from "./views/sign-in.ts";
+import { mockSignIn, signInPage, signInProblem } from "./views/sign-in.ts";
 
 const OAUTH_COOKIE = "chorus_oauth";
 const SESSION_COOKIE = "chorus_session";
@@ -57,11 +58,23 @@ async function signIn(res: Response, tokens: Tokens, next: string) {
   res.redirect(next);
 }
 
-auth.get("/login", (req, res) => {
+auth.get("/login", async (req, res) => {
   const next = safeNext(req.query.next);
   // The landing page is static and always says "Sign in", so signed-in people come through here too.
   if (readSession(req)) return res.redirect(next);
-  if (isMock()) return res.send(page("Sign in", mockSignIn(PEOPLE, next)));
+  const invite = next.match(/^\/c\/([\w-]+)\/join$/);
+  const joining = invite ? await getChorus(invite[1]) : null;
+  res.send(page("Sign in", signInPage(next, joining), { signingIn: true }));
+});
+
+auth.get("/login/buffer", (req, res) => {
+  const next = safeNext(req.query.next);
+  if (readSession(req)) return res.redirect(next);
+  if (isMock()) {
+    return res.send(
+      page("Sign in", mockSignIn(PEOPLE, next), { signingIn: true }),
+    );
+  }
   const { verifier, challenge } = createPkce();
   const state = randomBytes(16).toString("base64url");
   // The verifier stays with us until the token exchange; Buffer only ever sees its hash.

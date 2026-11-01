@@ -64,6 +64,18 @@ test("an unknown Chorus is a 404", async (t) => {
   assert.equal(res.status, 404);
 });
 
+test("sign-in from an invite says which Chorus it is", async (t) => {
+  const base = await listen(t);
+  const path = await startChorus(base);
+  const html = await (await fetch(`${base}/login?next=${path}/join`)).text();
+  assert.match(html, /You're joining/);
+  assert.match(html, /Northwind ships Tally 2\.0/);
+
+  const unknown = await fetch(`${base}/login?next=/c/nothing/join`);
+  assert.equal(unknown.status, 200);
+  assert.doesNotMatch(await unknown.text(), /You're joining/);
+});
+
 test("joining while signed out signs in first and comes back", async (t) => {
   const base = await listen(t);
   const path = await startChorus(base);

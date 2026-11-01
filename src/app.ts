@@ -46,7 +46,7 @@ const onError: ErrorRequestHandler = (err, _req, res, _next) => {
         "Sign in again",
         html`<h1>Sign in again</h1>
 <p>Chorus isn't connected to your Buffer account anymore. Sign in again, and you can go on where you were.</p>
-<p><a href="/login" class="button primary">Sign in with Buffer</a></p>`,
+<p><a href="/login/buffer" class="button primary">Sign in with Buffer</a></p>`,
       ),
     );
   }

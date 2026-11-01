@@ -22,7 +22,7 @@ only accepts https redirect URIs, localhost too).
 npm install
 mkcert -install    # once per machine
 npm run cert
-npm run db         # MongoDB on localhost:27017, for the app and the tests
+npm run db         # MongoDB on localhost:27017 (app and tests), data browser on http://localhost:8081
 npm run dev        # https://localhost:3000
 npm test
 npm run typecheck
@@ -31,6 +31,15 @@ npm run lint
 
 No Buffer account? Set `BUFFER_MOCK=1` in `.env` and skip step 1 (the app client values can stay empty).
 Sign-in then shows a list of fake people in different time zones, and nothing reaches Buffer.
+`npm run mock-data` fills the local database with a Chorus for each state of the wall (coming up, live at
+the start, halfway and near the end, finished), timed around the moment you run it. Run it again to reset:
+it first removes everything the fake people made.
+
+## Map data
+
+The world map uses [Natural Earth](https://www.naturalearthdata.com/) land shapes and the time zone
+positions from the [tz database](https://www.iana.org/time-zones), both public domain.
+`node scripts/world-map.ts` rebuilds `public/world.svg` and `src/zones.ts` from them.
 
 ## License
 

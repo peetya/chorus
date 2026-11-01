@@ -7,6 +7,7 @@
 import { isMock } from "../src/buffer.ts";
 import { type Chorus, choruses, plusDays } from "../src/choruses.ts";
 import { closeDb, db } from "../src/db.ts";
+import { deleteImages } from "../src/images.ts";
 import { mockTokens, PEOPLE, seededPostId } from "../src/mock.ts";
 import { type Post, posts } from "../src/posts.ts";
 import { localTime, zonedToUtc } from "../src/time.ts";
@@ -71,6 +72,7 @@ const removed = (
   })
 ).deletedCount;
 await (await choruses()).deleteMany({ ownerId: { $in: mockUsers } });
+await deleteImages({ ownerId: { $in: mockUsers } });
 
 type Plan = {
   id: string;

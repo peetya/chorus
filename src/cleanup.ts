@@ -1,6 +1,8 @@
-// What Chorus keeps, and for how long. Tokens and drafts go a day after a person's last Chorus is over.
-// The finished wall stays: first name and initial, network, time zone, the link to the real post.
+// What Chorus keeps, and for how long. Tokens and drafts go a day after a person's last Chorus is over,
+// images too, once no post still waits to go out with one. The finished wall stays: first name and
+// initial, network, time zone, the link to the real post.
 import { addDays, choruses, plusDays } from "./choruses.ts";
+import { deleteImages, images as imageRecords } from "./images.ts";
 import { posts } from "./posts.ts";
 import { dropTokens, users } from "./users.ts";
 
@@ -43,6 +45,7 @@ export async function deleteUserData(userId: string) {
     .find({ ownerId: userId }, { projection: { _id: 1 } })
     .toArray();
   const ownedIds = owned.map((chorus) => chorus._id);
+  await deleteImages({ ownerId: userId });
   await (await posts()).deleteMany({
     $or: [{ userId }, { chorusId: { $in: ownedIds } }],
   });
@@ -54,6 +57,7 @@ export async function deleteUserData(userId: string) {
 export async function dailyCleanup(): Promise<{
   tokens: number;
   texts: number;
+  images: number;
 }> {
   const cutoff = addDays(-KEEP_DAYS);
   const old = await (await choruses())
@@ -67,6 +71,37 @@ export async function dailyCleanup(): Promise<{
     { $unset: { text: "", answers: "", lastError: "" } },
   );
 
+  // Buffer fetches an image when the post goes out, so a Chorus keeps its images while a post is still
+  // due, like a draft the person scheduled for later in Buffer.
+  const withImages = (
+    await (
+      await imageRecords()
+    ).distinct("chorusId", { chorusId: { $ne: null } })
+  ).filter((id): id is string => id !== null);
+  const done = (
+    await (
+      await choruses()
+    )
+      .find(
+        { _id: { $in: withImages }, day: { $lte: cutoff } },
+        { projection: { _id: 1 } },
+      )
+      .toArray()
+  ).map((chorus) => chorus._id);
+  const waiting = await (await posts()).distinct("chorusId", {
+    chorusId: { $in: done },
+    dueAt: { $gt: new Date() },
+  });
+  // Images from a "Start a Chorus" form that was never sent.
+  const images =
+    (await deleteImages({
+      chorusId: { $in: done.filter((id) => !waiting.includes(id)) },
+    })) +
+    (await deleteImages({
+      chorusId: null,
+      createdAt: { $lt: new Date(Date.now() - 86_400_000) },
+    }));
+
   let tokens = 0;
   const connected = await (await users())
     .find({ tokenEnc: { $exists: true } }, { projection: { signedInAt: 1 } })
@@ -79,5 +114,5 @@ export async function dailyCleanup(): Promise<{
     await dropTokens(user._id);
     tokens++;
   }
-  return { tokens, texts };
+  return { tokens, texts, images };
 }

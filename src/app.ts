@@ -50,6 +50,13 @@ const onError: ErrorRequestHandler = (err, _req, res, _next) => {
       ),
     );
   }
+  // Almost always an image over the limit: the other forms are far smaller. new-images.js shows it.
+  if (err?.type === "entity.too.large") {
+    return res
+      .status(413)
+      .type("text")
+      .send("That image is over 4 MB. Try a smaller one.");
+  }
   console.error(
     JSON.stringify({ event: "request_failed", message: String(err?.message) }),
   );

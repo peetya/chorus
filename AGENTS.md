@@ -48,6 +48,9 @@ comes with the wave.
 - `src/auth.ts`: sign in (also as a fake person in mock mode), sign out, `readSession()`
 - `src/choruses.ts`: the `choruses` collection, and reading and checking the "Start a Chorus" form
 - `src/posts.ts`: the `posts` collection (one per person in a Chorus), joining, and which channels can't post
+- `src/images.ts`: the organizer's images (up to 4): checked by their bytes, cropped per network around a
+  focus point with `sharp`, and which one each person's post gets. `src/storage.ts` saves the files: Vercel
+  Blob with `BLOB_READ_WRITE_TOKEN`, else `public/uploads` (gitignored, mock mode only: Buffer can't reach it)
 - `src/checks.ts`: the free checks on a post (length the way each network counts it, the main hashtag,
   the hashtag limit, "Please avoid", and facts that aren't on the fact card). Only "too long" blocks
 - `src/time.ts`: local time in a zone to UTC and back (DST-safe, `Intl` only), and when a wave post goes out
@@ -63,7 +66,9 @@ comes with the wave.
 - `src/config.ts`: `env()` and `secretEnv()`, read when used so the tests run without a `.env`
 - `public/`: static files: the landing page, `style.css` (the design's colors and fonts), the logo, and
   `brief.js` (list rows and the live fact card on the form), `copy.js` (the invite link's copy button), `write.js` (sends the text to
-  `/c/:id/post/check` while you type; the checks run only on the server, so they live in one place).
+  `/c/:id/post/check` while you type; the checks run only on the server, so they live in one place, and
+  swaps the image preview), `new-images.js` (uploads images on "Start a Chorus" as they are picked) and
+  `focus.js` (dragging an image's crosshair moves its focus point and swaps in the new crops).
   Pages work without JS where they can
 - `test/`: `node --test` tests, named `*.test.ts`. `test/server.ts` starts the app on a free port
 

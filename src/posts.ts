@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Answer } from "./ai.ts";
 import type { Channel } from "./buffer.ts";
 import { collection } from "./db.ts";
+import { needsImage } from "./images.ts";
 
 // One per person in a Chorus, with one channel each. The text, the time and the Buffer post come later.
 export type Post = {
@@ -36,6 +37,9 @@ export type Post = {
   answers?: Answer[]; // only from "Draft with AI": the fact check accepts what's in them
   aiUses?: number;
   statusChecks: number;
+  // Which of the Chorus's images, counted round them (see imageFor). It starts as the number of people
+  // who joined before, so the images spread across the group. null is "No image".
+  imageIndex?: number | null;
   joinedAt: Date;
 };
 
@@ -52,6 +56,7 @@ export async function joinChorus(
   userId: string,
   channel: Channel,
 ) {
+  const before = await (await posts()).countDocuments({ chorusId });
   await (await posts()).updateOne(
     { chorusId, userId },
     {
@@ -67,6 +72,7 @@ export async function joinChorus(
         status: "drafting",
         aiShaped: false,
         statusChecks: 0,
+        imageIndex: before,
         joinedAt: new Date(),
       },
     },
@@ -78,14 +84,22 @@ export const MAX_TEXT = 10_000;
 export const MAX_ANSWER = 1000;
 
 // Only while drafting: once a post is scheduled, its text lives in Buffer and changes go through there.
+// imageIndex undefined keeps the image as it is.
 export async function saveText(
   chorusId: string,
   userId: string,
   text: string,
+  imageIndex?: number | null,
 ): Promise<boolean> {
   const { matchedCount } = await (await posts()).updateOne(
     { chorusId, userId, status: "drafting" },
-    { $set: { text: text.slice(0, MAX_TEXT), savedAt: new Date() } },
+    {
+      $set: {
+        text: text.slice(0, MAX_TEXT),
+        savedAt: new Date(),
+        ...(imageIndex !== undefined && { imageIndex }),
+      },
+    },
   );
   return matchedCount === 1;
 }
@@ -150,7 +164,19 @@ export async function joinedBy(userId: string): Promise<Post[]> {
 }
 
 // Buffer can't post from these, so joining with them would fail on the day.
-export function channelProblem(channel: Channel): string | null {
+// Pinterest needs a pin, TikTok and YouTube a video: a post with text and an image isn't enough.
+const NOT_SUPPORTED = ["pinterest", "tiktok", "youtube"];
+
+export function channelProblem(
+  channel: Channel,
+  hasImages: boolean,
+): string | null {
+  if (NOT_SUPPORTED.includes(channel.service)) {
+    return "Chorus can't post here: this network needs a pin or a video.";
+  }
+  if (needsImage(channel.service) && !hasImages) {
+    return "Instagram posts need an image, and this Chorus has none.";
+  }
   if (channel.isDisconnected) return "Reconnect this channel in Buffer first.";
   if (channel.isLocked) {
     return "This channel is locked in Buffer, usually because of your plan's channel limit.";

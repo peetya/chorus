@@ -28,6 +28,21 @@ import {
 import { deleteUserData, tokensGoOn } from "./cleanup.ts";
 import { page } from "./html.ts";
 import {
+  addImage,
+  altProblem,
+  type ChorusImage,
+  claimImages,
+  cropFor,
+  imageFor,
+  imageProblem,
+  imagesIn,
+  MAX_IMAGES,
+  parseFocus,
+  pickedImage,
+  removeImage,
+  updateImage,
+} from "./images.ts";
+import {
   approvedByOthers,
   backToDraft,
   channelProblem,
@@ -53,10 +68,12 @@ import {
   saveText,
   stillScheduled,
 } from "./posts.ts";
+import { bufferCanFetch } from "./storage.ts";
 import { waveDueAt } from "./time.ts";
 import { dropTokens, getAccessToken, getUser, namesOf } from "./users.ts";
 import { accountPage, deletedPage } from "./views/account.ts";
-import { chorusNotFound, chorusPage } from "./views/chorus.ts";
+import { type ChorusView, chorusNotFound, chorusPage } from "./views/chorus.ts";
+import { formImageCard } from "./views/images.ts";
 import { joinPage } from "./views/join.ts";
 import { shortName } from "./views/labels.ts";
 import { liveMap } from "./views/map.ts";
@@ -174,15 +191,19 @@ async function startBlocked(session: Session) {
   });
 }
 
+// new-images.js uploads the images while the form is filled in.
+const NEW_CHORUS_SCRIPTS = ["brief.js", "new-images.js", "focus.js"];
+
 pages.get("/new", async (req, res) => {
   const session = readSession(req);
   if (!session) return res.redirect("/login");
   const blocked = await startBlocked(session);
   if (blocked) return res.send(blocked);
+  const images = await imagesIn({ ownerId: session.userId, chorusId: null });
   res.send(
-    page("Start a Chorus", newChorusForm({}, []), {
+    page("Start a Chorus", newChorusForm({}, [], images), {
       viewer: viewer(session),
-      script: "brief.js",
+      script: NEW_CHORUS_SCRIPTS,
     }),
   );
 });
@@ -196,15 +217,31 @@ pages.post(
     const blocked = await startBlocked(session);
     if (blocked) return res.status(409).send(blocked);
     const { input, errors } = parseChorus(req.body ?? {});
+    // The images were uploaded already; the form sends their descriptions.
+    const images = (
+      await imagesIn({ ownerId: session.userId, chorusId: null })
+    ).map((image) => {
+      const alt = req.body?.[`alt-${image.id}`];
+      return typeof alt === "string" ? { ...image, alt: alt.trim() } : image;
+    });
+    images.forEach((image, i) => {
+      const problem = altProblem(image.alt);
+      if (problem) errors.push(`Image ${i + 1}: ${problem}`);
+    });
     if (errors.length) {
       return res.status(400).send(
-        page("Start a Chorus", newChorusForm(input, errors), {
+        page("Start a Chorus", newChorusForm(input, errors, images), {
           viewer: viewer(session),
-          script: "brief.js",
+          script: NEW_CHORUS_SCRIPTS,
         }),
       );
     }
     const chorus = await createChorus(session.userId, input);
+    await claimImages(
+      session.userId,
+      chorus._id,
+      new Map(images.map((image) => [image.id, image.alt])),
+    );
     res.redirect(303, `/c/${chorus._id}`);
   },
 );
@@ -256,29 +293,35 @@ async function peopleIn(chorus: Chorus) {
   return { joined, names };
 }
 
-pages.get("/c/:id", async (req, res) => {
-  const session = readSession(req);
-  const chorus = await getChorus(req.params.id);
-  if (!chorus) return notFound(res, session);
-  const live = isLive(chorus);
-  const over = isOver(chorus);
-  // Drafts are checked before the day too, and late posts after it.
-  await runDueChecks(chorus._id);
+async function chorusView(
+  req: express.Request,
+  session: Session | null,
+  chorus: Chorus,
+): Promise<ChorusView> {
   const { joined, names } = await peopleIn(chorus);
-  const isOrganizer = session?.userId === chorus.ownerId;
-  const view = {
+  return {
     chorus,
     organizer: names.get(chorus.ownerId) ?? "Someone",
     joined: joined.map((post) => ({
       name: names.get(post.userId) ?? "?",
       post,
     })),
-    isOrganizer,
+    isOrganizer: session?.userId === chorus.ownerId,
     post: joined.find((post) => post.userId === session?.userId) ?? null,
-    over,
-    live,
+    over: isOver(chorus),
+    live: isLive(chorus),
     inviteUrl: `https://${req.get("host")}/c/${chorus._id}`,
   };
+}
+
+pages.get("/c/:id", async (req, res) => {
+  const session = readSession(req);
+  const chorus = await getChorus(req.params.id);
+  if (!chorus) return notFound(res, session);
+  // Drafts are checked before the day too, and late posts after it.
+  await runDueChecks(chorus._id);
+  const view = await chorusView(req, session, chorus);
+  const { isOrganizer, over, live } = view;
   // From the day on everyone sees the wall. The organizer can still open the dashboard.
   const dashboard = isOrganizer && req.query.dashboard !== undefined;
   if (over && !dashboard) {
@@ -296,6 +339,99 @@ pages.get("/c/:id", async (req, res) => {
       script: wall ? "wall.js" : isOrganizer ? "copy.js" : undefined,
     }),
   );
+});
+
+// A form post with the file in it. Response.formData() reads multipart without another package.
+// null when there's no form to read.
+async function readUpload(req: express.Request) {
+  try {
+    const form = await new Response(req.body, {
+      headers: { "content-type": req.get("content-type") ?? "" },
+    }).formData();
+    const file = form.get("file");
+    const data =
+      file instanceof File
+        ? Buffer.from(await file.arrayBuffer())
+        : Buffer.alloc(0);
+    return { form, data };
+  } catch {
+    return null;
+  }
+}
+
+const upload = express.raw({ type: "multipart/form-data", limit: "4.5mb" });
+const FULL = "A Chorus can have 4 images. Remove one first.";
+
+// Images are added only on "Start a Chorus", like the rest of the brief, before the Chorus exists.
+// new-images.js gets back the new image's card, focus.js the new crops, or a plain text message. The
+// description is checked when the form is sent.
+async function formImagesOf(
+  req: express.Request,
+  res: Response,
+): Promise<{ ownerId: string; chorusId: null } | null> {
+  const session = readSession(req);
+  if (!session) {
+    res.status(401).type("text").send("Sign in again to add images.");
+    return null;
+  }
+  if (await startBlocked(session)) {
+    res.status(409).type("text").send("You can't start a Chorus right now.");
+    return null;
+  }
+  return { ownerId: session.userId, chorusId: null };
+}
+
+function sendCard(res: Response, image: ChorusImage, scope: ChorusImage[]) {
+  const i = scope.findIndex((other) => other.id === image.id);
+  res.type("html").send(formImageCard(image, i).value);
+}
+
+pages.post("/images", upload, async (req, res) => {
+  const scope = await formImagesOf(req, res);
+  if (!scope) return;
+  if (!bufferCanFetch()) {
+    return res
+      .status(400)
+      .type("text")
+      .send(
+        "Images need BLOB_READ_WRITE_TOKEN: Buffer can't fetch them from this computer.",
+      );
+  }
+  if ((await imagesIn(scope)).length >= MAX_IMAGES) {
+    return res.status(400).type("text").send(FULL);
+  }
+  const sent = await readUpload(req);
+  const problem = sent
+    ? await imageProblem(sent.data)
+    : "Pick an image file first.";
+  if (!sent || problem) return res.status(400).type("text").send(problem);
+  const image = await addImage(scope.ownerId, scope, sent.data, "", {
+    x: 0.5,
+    y: 0.5,
+  });
+  if (!image) return res.status(400).type("text").send(FULL);
+  sendCard(res, image, await imagesIn(scope));
+});
+
+pages.post(
+  "/images/:imageId",
+  express.urlencoded({ extended: false }),
+  async (req, res) => {
+    const scope = await formImagesOf(req, res);
+    if (!scope) return;
+    const alt = typeof req.body?.alt === "string" ? req.body.alt.trim() : "";
+    const focus = parseFocus(req.body?.focusX, req.body?.focusY);
+    const image = await updateImage(scope, req.params.imageId, alt, focus);
+    if (!image) return res.status(404).type("text").send("That image is gone.");
+    res.json(image.urls);
+  },
+);
+
+pages.post("/images/:imageId/remove", async (req, res) => {
+  const scope = await formImagesOf(req, res);
+  if (!scope) return;
+  await removeImage(scope, req.params.imageId);
+  res.sendStatus(204);
 });
 
 pages.get("/c/:id/wall", async (req, res) => {
@@ -324,9 +460,18 @@ pages.get("/c/:id/join", async (req, res) => {
     return res.redirect(`/c/${chorus._id}`);
   const channels = await channelsFor(session.userId);
   res.send(
-    page("Pick your channel", joinPage(chorus, channels, post?.channelId), {
-      viewer: viewer(session),
-    }),
+    page(
+      "Pick your channel",
+      joinPage(
+        chorus,
+        channels,
+        post?.channelId,
+        (await imagesIn({ chorusId: chorus._id })).length > 0,
+      ),
+      {
+        viewer: viewer(session),
+      },
+    ),
   );
 });
 
@@ -346,14 +491,21 @@ pages.post(
     // Ask Buffer again: the browser could send any id, and a channel can change in the meantime.
     const channels = await channelsFor(session.userId);
     const channel = channels.find((c) => c.id === req.body?.channelId);
+    const hasImages = (await imagesIn({ chorusId: chorus._id })).length > 0;
     const problem = channel
-      ? channelProblem(channel)
+      ? channelProblem(channel, hasImages)
       : "Pick one of your channels.";
     if (!channel || problem) {
       return res.status(400).send(
         page(
           "Pick your channel",
-          joinPage(chorus, channels, undefined, problem ?? undefined),
+          joinPage(
+            chorus,
+            channels,
+            undefined,
+            hasImages,
+            problem ?? undefined,
+          ),
           {
             viewer: viewer(session),
           },
@@ -430,6 +582,7 @@ pages.get("/c/:id/post", async (req, res) => {
         req.query.saved === "1",
         aiEnabled() ? { usesLeft: AI_USES - (post.aiUses ?? 0) } : null,
         req.query.drafted === "1",
+        await imagesIn({ chorusId: chorus._id }),
       ),
       { viewer: viewer(session), script: "write.js" },
     ),
@@ -446,7 +599,12 @@ pages.post(
     if (!session) return res.redirect(303, `/login?next=/c/${chorus._id}/post`);
     const text = typeof req.body?.text === "string" ? req.body.text : "";
     // A draft is saved even when it's too long: the checks stop it at approval, not here.
-    const saved = await saveText(chorus._id, session.userId, text);
+    const saved = await saveText(
+      chorus._id,
+      session.userId,
+      text,
+      pickedImage(req.body?.image, await imagesIn({ chorusId: chorus._id })),
+    );
     if (!saved) return res.redirect(303, `/c/${chorus._id}`);
     const next =
       req.body?.action === "approve" ? "post/review" : "post?saved=1";
@@ -572,10 +730,19 @@ pages.get("/c/:id/post/review", async (req, res) => {
   if (post?.status !== "drafting") return res.redirect(`/c/${chorus._id}`);
   const result = await checksFor(chorus, post, post.text ?? "");
   res.send(
-    page("Check your post", reviewPage(chorus, post, result), {
-      viewer: viewer(session),
-      script: "review.js",
-    }),
+    page(
+      "Check your post",
+      reviewPage(
+        chorus,
+        post,
+        result,
+        await imagesIn({ chorusId: chorus._id }),
+      ),
+      {
+        viewer: viewer(session),
+        script: "review.js",
+      },
+    ),
   );
 });
 
@@ -604,6 +771,8 @@ pages.post(
       return res.redirect(303, `/c/${chorus._id}/post/review`);
     }
 
+    // The image as it is now. Changing images later doesn't change this post: its files stay.
+    const image = imageFor(await imagesIn({ chorusId: chorus._id }), post);
     try {
       const scheduled = await createPost(await getAccessToken(session.userId), {
         channelId: post.channelId,
@@ -612,6 +781,9 @@ pages.post(
         dueAt: waveDueAt(chorus.day, chorus.localTime, post.channelTz),
         aiAssisted: post.aiShaped,
         saveToDraft: asDraft,
+        image: image
+          ? { url: image.urls[cropFor(post.channelService)], alt: image.alt }
+          : undefined,
       });
       if (!scheduled.ok) {
         await backToDraft(post._id, scheduled.message);

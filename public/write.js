@@ -24,3 +24,12 @@ form.elements.text.addEventListener("input", () => {
   clearTimeout(timer);
   timer = setTimeout(check, 300);
 });
+
+// The image picker: shows the crop of the picked image, or the "No image" note.
+for (const radio of form.querySelectorAll("[name=image]")) {
+  radio.addEventListener("change", () => {
+    for (const preview of form.querySelectorAll("[data-preview]")) {
+      preview.hidden = preview.dataset.preview !== radio.value;
+    }
+  });
+}

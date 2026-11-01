@@ -19,9 +19,11 @@
     "mock-data": "node --env-file-if-exists=.env scripts/mock-data.ts"
   },
   "dependencies": {
+    "@vercel/blob": "^2.8.2",
     "express": "^5.3.0",
     "mongodb": "^7.7.0",
-    "openai": "^7.47.0"
+    "openai": "^7.47.0",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.3",

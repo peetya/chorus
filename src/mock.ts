@@ -32,6 +32,14 @@ function channel(
 // Three channels can't be used (paused, locked, disconnected), so those cases can be tried too.
 export const PEOPLE = [
   {
+    id: "mock_chloe",
+    name: "Chloe Nguyen",
+    city: "Sydney",
+    channels: [
+      channel("ch_chloe_li", "Chloe Nguyen", "linkedin", "Australia/Sydney"),
+    ],
+  },
+  {
     id: "mock_aiko",
     name: "Aiko Tanaka",
     city: "Tokyo",
@@ -64,6 +72,14 @@ export const PEOPLE = [
         "bluesky",
         "Europe/Budapest",
       ),
+    ],
+  },
+  {
+    id: "mock_mark",
+    name: "Márk Varga",
+    city: "Budapest",
+    channels: [
+      channel("ch_mark_li", "Márk Varga", "linkedin", "Europe/Budapest"),
     ],
   },
   {
@@ -128,6 +144,26 @@ export const scheduled = new Map<
     draft: boolean;
   }
 >();
+
+// The posts `npm run mock-data` puts in the database: the id says whose it is and when it goes out, so
+// they still answer after a restart.
+export function seededPostId(personId: string, dueAt: Date): string {
+  return `mockseed.${personId}.${dueAt.getTime()}`;
+}
+
+function findScheduled(id: string) {
+  const known = scheduled.get(id);
+  if (known) return known;
+  const [prefix, owner, due] = id.split(".");
+  if (prefix !== "mockseed" || !owner || !Number(due)) return undefined;
+  return {
+    id,
+    dueAt: new Date(Number(due)).toISOString(),
+    owner,
+    channelId: "",
+    draft: false,
+  };
+}
 
 // A post on this channel fails when it's due, so a failed post can be tried on the wall.
 const FAILING_CHANNEL = "ch_zsofia_bsky";
@@ -200,7 +236,7 @@ export function mockGraphql(
   }
   if (operation === "DeletePost") {
     const { id } = (variables?.input ?? {}) as { id?: string };
-    if (!id || scheduled.get(id)?.owner !== person.id) {
+    if (!id || findScheduled(id)?.owner !== person.id) {
       return { deletePost: { message: "Post not found" } };
     }
     scheduled.delete(id);
@@ -208,7 +244,7 @@ export function mockGraphql(
   }
   if (operation === "PostStatus") {
     const { id = "" } = (variables?.input ?? {}) as { id?: string };
-    const known = scheduled.get(id);
+    const known = findScheduled(id);
     if (known && known.owner !== person.id) {
       throw new Error("Buffer API error: FORBIDDEN (mock)");
     }

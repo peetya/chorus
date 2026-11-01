@@ -4,6 +4,7 @@ import type { Post } from "../posts.ts";
 import { localTime, utcOffset } from "../time.ts";
 import { type ChorusView, type Joined, joinBox } from "./chorus.ts";
 import { initials, place, serviceName, shortName, showDay } from "./labels.ts";
+import { finishedMap, liveMap } from "./map.ts";
 
 type Entry = Joined & { post: Post & { dueAt: Date } };
 
@@ -36,7 +37,7 @@ function entry({ name, post }: Entry): Html {
 </li>`;
 }
 
-function scheduledOnly(joined: Joined[]): Entry[] {
+export function scheduled(joined: Joined[]): Entry[] {
   return joined
     .filter((person): person is Entry => person.post.dueAt !== undefined)
     .sort((a, b) => a.post.dueAt.getTime() - b.post.dueAt.getTime());
@@ -44,7 +45,7 @@ function scheduledOnly(joined: Joined[]): Entry[] {
 
 // Every scheduled post, grouped by time zone, earliest zone first. Polled every minute by wall.js.
 export function wallList(joined: Joined[]): Html {
-  const entries = scheduledOnly(joined);
+  const entries = scheduled(joined);
   const zones = new Map<string, Entry[]>();
   for (const item of entries) {
     zones.set(item.post.channelTz, [
@@ -74,6 +75,9 @@ export function wallPage(view: ChorusView): Html {
   <h1>${chorus.title}</h1>
   <p class="mono muted">${showDay(chorus.day)} · ${chorus.localTime} in each person's time zone</p>
   ${isOrganizer && html`<a href="/c/${chorus._id}?dashboard" class="small">Open your dashboard</a>`}
+</div>
+<div data-wall="/c/${chorus._id}/wall?map">
+${liveMap(scheduled(view.joined))}
 </div>
 <div class="layout">
 <div class="wall" data-wall="/c/${chorus._id}/wall">
@@ -114,7 +118,7 @@ function finishedPost({ name, post }: Entry): Html {
 // After the day: a public record of the wave, with links to the real posts.
 export function finishedPage(view: ChorusView): Html {
   const { chorus, isOrganizer, inviteUrl } = view;
-  const entries = scheduledOnly(view.joined);
+  const entries = scheduled(view.joined);
   const sent = entries.filter(({ post }) => post.status === "sent");
   const title =
     sent.length === 0
@@ -140,6 +144,7 @@ export function finishedPage(view: ChorusView): Html {
   <button type="button" class="button" data-copy="link">Copy link</button>
   ${canCreate() && html`<a href="/new" class="button primary">Start your own Chorus</a>`}
 </div>
+${sent.length > 0 && finishedMap(entries)}
 ${
   sent.length > 0 &&
   html`<section class="group">

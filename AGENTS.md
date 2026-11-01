@@ -24,7 +24,7 @@ after another through one day in one city (a relay). Built on Buffer's public AP
 ```bash
 npm install
 npm run cert         # once: local https certificate with mkcert (Buffer needs https)
-npm run db           # MongoDB in Docker on localhost:27017; the tests need it too
+npm run db           # MongoDB in Docker on localhost:27017 (the tests need it too), browser on :8081
 npm run dev          # local server on https://localhost:3000
 npm test             # node --test
 npm run typecheck    # tsc, no emit

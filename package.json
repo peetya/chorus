@@ -10,11 +10,13 @@
   "scripts": {
     "dev": "node --watch --env-file-if-exists=.env src/dev.ts",
     "cert": "mkdir -p .cert && mkcert -key-file .cert/key.pem -cert-file .cert/cert.pem localhost",
-    "db": "docker run --rm -d -p 27017:27017 --name chorus-mongo mongo:8",
+    "db": "docker compose up -d",
+    "db:stop": "docker compose stop",
     "test": "node --test \"test/**/*.test.ts\"",
     "typecheck": "tsc",
     "lint": "biome check .",
-    "format": "biome check --write ."
+    "format": "biome check --write .",
+    "mock-data": "node --env-file-if-exists=.env scripts/mock-data.ts"
   },
   "dependencies": {
     "express": "^5.3.0",

@@ -1,7 +1,7 @@
 // Wall-clock time in a time zone, to UTC and back. Only Intl and IANA zone names, never offsets by hand:
 // DST moves them twice a year, on different days in different countries.
 
-function offsetMs(utc: number, timeZone: string): number {
+export function offsetMs(utc: number, timeZone: string): number {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-US", {
       timeZone,

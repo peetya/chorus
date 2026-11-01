@@ -1,3 +1,5 @@
+import { initials } from "./views/labels.ts";
+
 const ESCAPES: Record<string, string> = {
   "&": "&amp;",
   "<": "&lt;",
@@ -48,21 +50,33 @@ export function raw(markup: string): Html {
 }
 
 export type PageOptions = {
-  viewer?: { name: string } | null; // who is signed in, for the header
+  viewer?: { name: string; mock?: boolean } | null; // who is signed in, for the header
   script?: string | string[]; // files in public/, for the few pages that need JS
+  signingIn?: boolean; // the sign-in pages leave out the header's "Sign in" link to themselves
 };
 
-function header(viewer: PageOptions["viewer"]): Html {
-  const nav = viewer
-    ? html`<a href="/me">My Choruses</a>
-      <a href="/account" class="who"><span class="who-name">${viewer.name}</span><span class="who-short">Account</span></a>
-      <form method="post" action="/logout"><button type="submit" class="link">Sign out</button></form>`
-    : html`<a href="/login">Sign in</a>`;
+// The right side of the header, also on the landing page: the person's initials open a menu. It works
+// without JS; menu.js only closes it on a click outside or Escape.
+export function accountNav(viewer: PageOptions["viewer"]): Html {
+  if (!viewer) return html`<a href="/login">Sign in</a>`;
+  return html`<details class="menu">
+        <summary class="avatar menu-avatar" aria-label="Menu for ${viewer.name}">${initials(viewer.name)}</summary>
+        <div class="menu-panel">
+          <p class="menu-who">Signed in as <strong>${viewer.name}${viewer.mock && " (mock mode)"}</strong></p>
+          <a href="/me" class="menu-item">My Choruses</a>
+          <a href="/account" class="menu-item">My account</a>
+          <form method="post" action="/logout"><button type="submit" class="menu-item">Sign out</button></form>
+        </div>
+      </details>
+      <script src="/menu.js" defer></script>`;
+}
+
+function header(viewer: PageOptions["viewer"], signingIn = false): Html {
   return html`<header class="top">
     <div>
       <a href="/" class="brand"><img src="/logo.svg" alt="" width="24" height="24"><span>chorus</span></a>
       <nav>
-      ${nav}
+      ${!signingIn && accountNav(viewer)}
       </nav>
     </div>
   </header>`;
@@ -71,7 +85,7 @@ function header(viewer: PageOptions["viewer"]): Html {
 export function page(
   title: string,
   body: Html,
-  { viewer, script }: PageOptions = {},
+  { viewer, script, signingIn }: PageOptions = {},
 ): string {
   return html`<!doctype html>
 <html lang="en">
@@ -86,7 +100,7 @@ export function page(
   <link rel="stylesheet" href="/style.css">${[script ?? []].flat().map((file) => html`\n  <script src="/${file}" defer></script>`)}
 </head>
 <body>
-  ${header(viewer)}
+  ${header(viewer, signingIn)}
   <main>
 ${body}
   </main>

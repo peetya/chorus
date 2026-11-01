@@ -17,7 +17,7 @@ function signInAs(base: string, person: string) {
 
 test("login lists the fake people instead of going to Buffer", async (t) => {
   const base = await listen(t);
-  const res = await fetch(`${base}/login`, { redirect: "manual" });
+  const res = await fetch(`${base}/login/buffer`, { redirect: "manual" });
 
   assert.equal(res.status, 200);
   assert.match(await res.text(), /Aiko Tanaka, Tokyo/);
@@ -46,6 +46,19 @@ test("sign in while signed in goes straight to My Choruses", async (t) => {
   assert.equal(res.headers.get("location"), "/me");
 });
 
+test("the landing page's header knows who is signed in", async (t) => {
+  const base = await listen(t);
+  const out = await (await fetch(base)).text();
+  assert.match(out, /Announce it together/);
+  assert.match(out, /href="\/login">Sign in/);
+
+  const cookie = await mockSession(base, "mock_ravi");
+  const signedIn = await (await fetch(base, { headers: { cookie } })).text();
+  assert.match(signedIn, /My Choruses/);
+  assert.match(signedIn, /class="avatar menu-avatar"[^>]*>RK</);
+  assert.doesNotMatch(signedIn, /href="\/login"/);
+});
+
 test("someone not on the list can't sign in", async (t) => {
   const base = await listen(t);
   const res = await signInAs(base, "mock_nobody");
@@ -56,6 +69,6 @@ test("mock mode refuses to run in production", async (t) => {
   process.env.VERCEL_ENV = "production";
   t.after(() => delete process.env.VERCEL_ENV);
   const base = await listen(t);
-  const res = await fetch(`${base}/login`);
+  const res = await fetch(`${base}/login/buffer`);
   assert.equal(res.status, 500);
 });

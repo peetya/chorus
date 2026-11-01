@@ -38,7 +38,7 @@ export function accountPage(view: AccountView): Html {
     <span class="hint">Posts already in your Buffer queue still go out. You can also remove Chorus in your Buffer settings.</span>
   </form>`
       : html`<p class="muted">Chorus can't schedule or check posts for you now. Sign in again to connect it.</p>
-  <a href="/login?next=/account" class="button primary">Sign in with Buffer</a>`
+  <a href="/login/buffer?next=/account" class="button primary">Sign in with Buffer</a>`
   }
 </section>
 <section class="box">

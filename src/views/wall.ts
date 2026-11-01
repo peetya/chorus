@@ -6,16 +6,16 @@ import { type ChorusView, type Joined, joinBox } from "./chorus.ts";
 import { initials, place, serviceName, shortName, showDay } from "./labels.ts";
 import { finishedMap, liveMap } from "./map.ts";
 
-type Entry = Joined & { post: Post & { dueAt: Date } };
+export type Entry = Joined & { post: Post & { dueAt: Date } };
 
 // The link comes from Buffer, but only a plain web link goes into the page.
-function realLink(post: Post): string | undefined {
+export function realLink(post: Post): string | undefined {
   return post.externalLink?.startsWith("https://")
     ? post.externalLink
     : undefined;
 }
 
-function state(post: Post & { dueAt: Date }): Html {
+export function state(post: Post & { dueAt: Date }): Html {
   if (post.status === "sent") {
     const link = realLink(post);
     return link
@@ -90,7 +90,7 @@ ${joinBox(view)}
 </div>`;
 }
 
-function count(n: number, one: string, many: string): string {
+export function count(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
 }
 

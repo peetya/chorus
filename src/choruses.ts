@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { collection } from "./db.ts";
-import { zonedToUtc } from "./time.ts";
+import { RELAY_END, relayTimes, zonedToUtc } from "./time.ts";
+import { PLACES } from "./zones.ts";
 
 export const TONES = {
   any: "Let everyone choose",
@@ -12,7 +13,10 @@ export const TONES = {
 
 export type Tone = keyof typeof TONES;
 
-// What the organizer fills in. Relay comes later, so every Chorus is a wave for now.
+// Minutes between two posts in a relay.
+export const RELAY_GAPS = [20, 30, 45, 60];
+
+// What the organizer fills in.
 export type ChorusInput = {
   title: string;
   note?: string;
@@ -24,15 +28,46 @@ export type ChorusInput = {
   questions: string[]; // a guide next to the editor, and the AI form's fields
   tone: Tone;
   day: string; // "2026-11-11"
-  localTime: string; // "09:00", the same local time in every time zone
+  // A wave goes out at the same local time in every time zone. A relay goes out one post after another
+  // in one time zone, from localTime on, one every relayGapMin minutes.
+  kind: "wave" | "relay";
+  localTime: string; // "09:00": a wave's time everywhere, or a relay's first post
+  relayTz?: string;
+  relayGapMin?: number;
 };
 
 export type Chorus = ChorusInput & {
   _id: string; // short, also the invite code
   ownerId: string;
-  kind: "wave";
   createdAt: Date;
 };
+
+export type Relay = Chorus & {
+  kind: "relay";
+  relayTz: string;
+  relayGapMin: number;
+};
+
+export function isRelay(chorus: Chorus): chorus is Relay {
+  return chorus.kind === "relay";
+}
+
+// The time zone a post goes out in: the relay's, or the person's own in a wave.
+export function zoneOf(chorus: Chorus, post: { channelTz: string }): string {
+  return isRelay(chorus) ? chorus.relayTz : post.channelTz;
+}
+
+// When each slot of a relay goes out, in order.
+export function relaySlots(chorus: Relay): Date[] {
+  return relayTimes(chorus.localTime, chorus.relayGapMin).map((time) =>
+    zonedToUtc(chorus.day, time, chorus.relayTz),
+  );
+}
+
+// The day as it is in this time zone, like "2026-11-11".
+function dayIn(timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone }).format(new Date());
+}
 
 export const LIMITS = { facts: 12, hashtags: 10, avoid: 12, questions: 3 };
 const LINE = 200;
@@ -72,14 +107,17 @@ export function plusDays(day: string, days: number): string {
     .slice(0, 10);
 }
 
-// A wave runs through every time zone, so joining stays open until the day after.
+// A wave runs through every time zone, so joining stays open until the day after. A relay is over when
+// its day is over in its time zone.
 export function isOver(chorus: Chorus): boolean {
+  if (isRelay(chorus)) return chorus.day < dayIn(chorus.relayTz);
   return chorus.day < addDays(-1);
 }
 
-// Live from midnight where the day starts first (UTC+14) until joining closes.
+// Live from midnight where the day starts first (UTC+14), or in the relay's zone, until joining closes.
 export function isLive(chorus: Chorus): boolean {
-  const start = zonedToUtc(chorus.day, "00:00", "Pacific/Kiritimati");
+  const zone = isRelay(chorus) ? chorus.relayTz : "Pacific/Kiritimati";
+  const start = zonedToUtc(chorus.day, "00:00", zone);
   return Date.now() >= start.getTime() && !isOver(chorus);
 }
 
@@ -103,6 +141,7 @@ export function parseChorus(body: Record<string, unknown>): {
     .filter(Boolean);
   const maxHashtags = Number(body.maxHashtags);
   const tone = text(body.tone);
+  const kind = body.kind === "relay" ? "relay" : "wave";
   const input: ChorusInput = {
     title: text(body.title),
     note: text(body.note) || undefined,
@@ -114,7 +153,10 @@ export function parseChorus(body: Record<string, unknown>): {
     questions: list(body.questions),
     tone: tone in TONES ? (tone as Tone) : "any",
     day: text(body.day),
+    kind,
     localTime: text(body.localTime) || "09:00",
+    relayTz: kind === "relay" ? text(body.relayTz) : undefined,
+    relayGapMin: kind === "relay" ? Number(body.relayGapMin) : undefined,
   };
 
   const errors: string[] = [];
@@ -156,6 +198,18 @@ export function parseChorus(body: Record<string, unknown>): {
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.localTime)) {
     errors.push("Pick a time, like 09:00.");
   }
+  if (kind === "relay") {
+    // Only zones with a city we know, so the wall can show that city's sun.
+    if (!Object.hasOwn(PLACES, input.relayTz ?? "")) {
+      errors.push("Pick the time zone of the relay.");
+    }
+    if (!RELAY_GAPS.includes(input.relayGapMin ?? 0)) {
+      errors.push("Pick how often a new post goes out.");
+    }
+    if (input.localTime >= RELAY_END) {
+      errors.push(`A relay's first post must be before ${RELAY_END}.`);
+    }
+  }
   return { input, errors };
 }
 
@@ -167,7 +221,6 @@ export async function createChorus(
     ...input,
     _id: randomBytes(6).toString("base64url"),
     ownerId,
-    kind: "wave",
     createdAt: new Date(),
   };
   await (await choruses()).insertOne(chorus);

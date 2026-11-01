@@ -1756,3 +1756,149 @@ a.finished-post:hover {
   width: 100%;
   border-radius: 10px;
 }
+
+/* Wave or relay on the "Start a Chorus" form. Only the fields of the chosen kind show. */
+
+.kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.kind {
+  flex: 1 1 240px;
+  min-width: 0;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  background: #fff;
+}
+
+.kind:has(input:checked) {
+  border: 2px solid var(--ink);
+  padding: 13px 15px;
+}
+
+.kind input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+  flex: none;
+}
+
+.kind-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.kind strong {
+  font-size: 16px;
+}
+
+.brief:has(input[name="kind"][value="wave"]:checked) .relay-only,
+.brief:has(input[name="kind"][value="relay"]:checked) .wave-only {
+  display: none;
+}
+
+/* Relay wall: the sun's path over the relay's city, on a dark panel like the world map */
+
+.sun-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sun-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.sun-title {
+  font-size: 20px;
+}
+
+.sun-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.sun-legend .key {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-left: 8px;
+}
+
+.key.posted {
+  background: #fcd34d;
+}
+
+.key.next {
+  border: 2px solid #fb923c;
+}
+
+.key.waiting {
+  border: 2px solid #7c8598;
+}
+
+.sun-frame {
+  background: #131829;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.sun-frame svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The halo around the sun breathes slowly. The only animation on the wall. */
+.sun-glow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sun-glow 3.4s ease-in-out infinite;
+}
+
+@keyframes sun-glow {
+  50% {
+    transform: scale(1.25);
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sun-glow {
+    animation: none;
+  }
+}
+
+/* On a phone the names would be a few pixels tall; the list below says the same. */
+@media (max-width: 600px) {
+  .sun-label {
+    display: none;
+  }
+}
+
+.wall-post.next .avatar {
+  background: var(--ink);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.wall-post.next .wall-state {
+  color: var(--accent-ink);
+}

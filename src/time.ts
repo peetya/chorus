@@ -85,3 +85,18 @@ export function waveDueAt(
   const planned = zonedToUtc(day, time, timeZone).getTime() + spread;
   return new Date(Math.max(planned, now + LATE_MINUTES * 60_000));
 }
+
+// A relay's last post starts before this, in the relay's time zone.
+export const RELAY_END = "18:00";
+
+// The local times of a relay's slots: "09:00" every 45 minutes -> "09:00", "09:45", ... "17:15".
+export function relayTimes(first: string, gapMinutes: number): string[] {
+  const [hour, minute] = first.split(":").map(Number);
+  const [endHour] = RELAY_END.split(":").map(Number);
+  const times: string[] = [];
+  for (let at = hour * 60 + minute; at < endHour * 60; at += gapMinutes) {
+    const hh = String(Math.floor(at / 60)).padStart(2, "0");
+    times.push(`${hh}:${String(at % 60).padStart(2, "0")}`);
+  }
+  return times;
+}

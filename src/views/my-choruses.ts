@@ -1,6 +1,13 @@
-import { addDays, type Chorus, canCreate, isLive } from "../choruses.ts";
+import {
+  addDays,
+  type Chorus,
+  canCreate,
+  isLive,
+  isOver,
+  isRelay,
+} from "../choruses.ts";
 import { type Html, html } from "../html.ts";
-import { shortName, showDay } from "./labels.ts";
+import { shortName, showDay, timing } from "./labels.ts";
 
 // Empty for yesterday: a wave still runs in the last time zones then, so it isn't done yet.
 export function until(day: string): string {
@@ -27,7 +34,7 @@ function card({ chorus, organizer }: MyChorus, done: boolean): Html {
   return html`<a href="/c/${chorus._id}" class="chorus-card${done && " done"}">
   <span class="pill">${when}</span>
   <span class="chorus-title">${chorus.title}</span>
-  <span class="muted">${role} · at <span class="mono">${chorus.localTime}</span> in each person's time zone</span>
+  <span class="muted">${role} · ${isRelay(chorus) ? `Relay ${timing(chorus)}` : html`at <span class="mono">${chorus.localTime}</span> in each person's time zone`}</span>
 </a>`;
 }
 
@@ -44,13 +51,11 @@ ${items.map((item) => card(item, done))}
 }
 
 export function myChoruses(items: MyChorus[]): Html {
-  // A wave runs through every time zone, so it counts as done only the day after.
-  const yesterday = addDays(-1);
   const live = items.filter(({ chorus }) => isLive(chorus));
   const coming = items.filter(
-    ({ chorus }) => chorus.day >= yesterday && !isLive(chorus),
+    ({ chorus }) => !isOver(chorus) && !isLive(chorus),
   );
-  const done = items.filter(({ chorus }) => chorus.day < yesterday).reverse();
+  const done = items.filter(({ chorus }) => isOver(chorus)).reverse();
   return html`<div class="page-head row-head">
   <h1>My Choruses</h1>
   ${canCreate() && html`<a href="/new" class="button primary">Start a Chorus</a>`}

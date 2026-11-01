@@ -5,13 +5,20 @@
 // The live ones are built around the current time, so the wall is in the middle of its day whenever
 // the script runs. Their time is not 09:00, but whatever puts "now" where it should be.
 import { isMock } from "../src/buffer.ts";
-import { type Chorus, choruses, plusDays } from "../src/choruses.ts";
+import {
+  type Chorus,
+  choruses,
+  plusDays,
+  type Relay,
+  relaySlots,
+} from "../src/choruses.ts";
 import { closeDb, db } from "../src/db.ts";
 import { deleteImages } from "../src/images.ts";
 import { mockTokens, PEOPLE, seededPostId } from "../src/mock.ts";
 import { type Post, posts } from "../src/posts.ts";
 import { localTime, zonedToUtc } from "../src/time.ts";
 import { saveUser, users } from "../src/users.ts";
+import { PLACES } from "../src/zones.ts";
 
 if (!isMock())
   throw new Error("Run it with BUFFER_MOCK=1, in .env or before the command.");
@@ -80,9 +87,25 @@ type Plan = {
   owner: string;
   day: string;
   localTime: string;
-  // Who joined. Without a status the time decides: sent if it's past, scheduled if not.
+  relay?: { tz: string; gap: number };
+  // Who joined. Without a status the time decides: sent if it's past, scheduled if not. In a relay
+  // everyone who isn't drafting takes the next slot.
   people: [string, ("drafting" | "drafted" | "failed")?, string?][];
 };
+
+// A live relay needs slots on both sides of now, before 18:00. Somewhere it's late morning: a familiar
+// city if possible, or any time zone on the map.
+const relayZone = [
+  "Europe/Budapest",
+  "America/New_York",
+  "America/Los_Angeles",
+  "Asia/Tokyo",
+  ...Object.keys(PLACES),
+].find((zone) => {
+  const hour = Number(localTime(new Date(now), zone).slice(0, 2));
+  return hour >= 10 && hour < 14;
+});
+if (!relayZone) throw new Error("No time zone has late morning now?");
 
 const yesterday = dayIn(now - 86_400_000, "UTC");
 const plans: Plan[] = [
@@ -175,13 +198,60 @@ const plans: Plan[] = [
       ["mock_maya"],
     ],
   },
+  {
+    id: "relay-live",
+    title: "Relay, live: one voice every 30 minutes",
+    owner: "mock_mark",
+    ...aroundNow(relayZone, -100),
+    relay: { tz: relayZone, gap: 30 },
+    people: [
+      ["mock_chloe"],
+      ["mock_aiko"],
+      ["mock_ravi"],
+      ["mock_zsofia"],
+      ["mock_sam"],
+      ["mock_dana"],
+      ["mock_maya", "drafting"],
+    ],
+  },
+  {
+    id: "relay-full",
+    title: "Relay, full: one slot, already taken",
+    owner: "mock_maya",
+    day: plusDays(dayIn(now, "Europe/Budapest"), 1),
+    localTime: "17:00",
+    relay: { tz: "Europe/Budapest", gap: 60 },
+    people: [
+      ["mock_aiko"],
+      ["mock_ravi", "drafting"],
+      ["mock_sam", "drafting"],
+    ],
+  },
+  {
+    id: "relay-done",
+    title: "Relay, done",
+    owner: "mock_zsofia",
+    day: plusDays(dayIn(now, "Europe/Budapest"), -3),
+    localTime: "09:00",
+    relay: { tz: "Europe/Budapest", gap: 45 },
+    people: [
+      ["mock_zsofia"],
+      ["mock_mark"],
+      ["mock_sam"],
+      ["mock_aiko"],
+      ["mock_chloe"],
+      ["mock_dana"],
+    ],
+  },
 ];
 
 for (const plan of plans) {
   const chorus: Chorus = {
     _id: plan.id,
     ownerId: userId(plan.owner),
-    kind: "wave",
+    kind: plan.relay ? "relay" : "wave",
+    relayTz: plan.relay?.tz,
+    relayGapMin: plan.relay?.gap,
     createdAt: new Date(now),
     title: plan.title,
     facts: [
@@ -198,6 +268,8 @@ for (const plan of plans) {
     localTime: plan.localTime,
   };
   await (await choruses()).insertOne(chorus);
+  const slots = plan.relay ? relaySlots(chorus as Relay) : [];
+  let nextSlot = 0;
 
   const joined = plan.people.map(([personId, status, channelId], i): Post => {
     const person = PEOPLE.find((p) => p.id === personId);
@@ -218,13 +290,18 @@ for (const plan of plans) {
       joinedAt: new Date(now - (60 - i) * MINUTE),
     };
     if (status === "drafting") return { ...base, status };
+    const relaySlot = plan.relay ? nextSlot++ : undefined;
     // Two people in one time zone go out a few minutes apart, like a real wave.
-    const dueAt = new Date(
-      zonedToUtc(plan.day, plan.localTime, channel.timezone).getTime() +
-        (personId === "mock_mark" ? 3 * MINUTE : 0),
-    );
+    const dueAt =
+      relaySlot !== undefined
+        ? slots[relaySlot]
+        : new Date(
+            zonedToUtc(plan.day, plan.localTime, channel.timezone).getTime() +
+              (personId === "mock_mark" ? 3 * MINUTE : 0),
+          );
     const scheduled = {
       ...base,
+      relaySlot,
       text: `Our new office in Lisbon opens on Monday. ${person.name.split(" ")[0]} here, and I can't wait to see the river from my desk. #LisbonOffice`,
       bufferPostId: seededPostId(personId, dueAt),
       dueAt,

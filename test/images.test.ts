@@ -194,6 +194,9 @@ test("at most 4 images, moving the focus makes new crops, removing deletes", asy
       ["focusY", "0.5"],
     ])
   ).json();
+  // focus.js swaps every crop on the card, so each one comes back.
+  assert.deepEqual(Object.keys(moved).sort(), Object.keys(image.urls).sort());
+  assert.notEqual(moved.portrait, image.urls.portrait);
   assert.notEqual(moved.linkedin, image.urls.linkedin);
   assert.ok((await redness(moved.linkedin)) > 200);
   const [saved] = await imagesIn(pending);

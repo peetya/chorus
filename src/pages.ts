@@ -423,7 +423,7 @@ pages.post(
     const focus = parseFocus(req.body?.focusX, req.body?.focusY);
     const image = await updateImage(scope, req.params.imageId, alt, focus);
     if (!image) return res.status(404).type("text").send("That image is gone.");
-    res.json({ linkedin: image.urls.linkedin, wide: image.urls.wide });
+    res.json(image.urls);
   },
 );
 

@@ -40,7 +40,7 @@ function crops(image: ChorusImage): Html {
     <div>
     ${CROP_LABELS.map(
       ([crop, label]) =>
-        html`<figure><img src="${image.urls[crop]}" alt=""><figcaption>${label}</figcaption></figure>`,
+        html`<figure><img src="${image.urls[crop]}" alt="" data-crop="${crop}"><figcaption>${label}</figcaption></figure>`,
     )}
     </div>
   </div>`;

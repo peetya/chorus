@@ -26,18 +26,16 @@ async function save(pick, focus) {
   });
   if (!res.ok || pick.dataset.turn !== turn) return;
   const urls = await res.json();
-  const next = [urls.linkedin, urls.wide, urls.wide];
+  const crops = [...card.querySelectorAll("[data-crop]")];
   await Promise.all(
-    next.map((src) => {
+    crops.map(({ dataset }) => {
       const image = new Image();
-      image.src = src;
+      image.src = urls[dataset.crop];
       return image.decode().catch(() => {});
     }),
   );
   if (pick.dataset.turn !== turn) return;
-  card.querySelectorAll(".crops img").forEach((image, i) => {
-    image.src = next[i];
-  });
+  for (const image of crops) image.src = urls[image.dataset.crop];
 }
 
 document.addEventListener("pointerdown", (event) => {

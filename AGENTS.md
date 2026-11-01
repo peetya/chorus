@@ -67,8 +67,10 @@ comes with the wave.
 - `public/`: static files: the landing page, `style.css` (the design's colors and fonts), the logo, and
   `brief.js` (list rows and the live fact card on the form), `copy.js` (the invite link's copy button), `write.js` (sends the text to
   `/c/:id/post/check` while you type; the checks run only on the server, so they live in one place, and
-  swaps the image preview), `new-images.js` (uploads images on "Start a Chorus" as they are picked) and
-  `focus.js` (dragging an image's crosshair moves its focus point and swaps in the new crops).
+  swaps the image preview), `new-images.js` (uploads images on "Start a Chorus" as they are picked),
+  `focus.js` (dragging an image's crosshair moves its focus point and swaps in the new crops),
+  `landing.js` (the landing map's moving daylight), `confetti.js` (once per finished Chorus) and `intro.js`
+  (starts the finished page's SVG animations; all of them stay still under reduced motion).
   Pages work without JS where they can
 - `test/`: `node --test` tests, named `*.test.ts`. `test/server.ts` starts the app on a free port
 

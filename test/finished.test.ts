@@ -102,6 +102,9 @@ test("after the day the wall is a public record with links to the real posts", a
   assert.match(html, /Maya L\./);
   assert.doesNotMatch(html, /Dana R\.|Token expired|Ravi K\.|own words/);
   assert.match(html, /Start your own Chorus/);
+  // Posts went out, so the page brings the one-time confetti.
+  assert.match(html, /<script src="\/copy.js" defer><\/script>/);
+  assert.match(html, /<script src="\/confetti.js" defer><\/script>/);
 
   const dashboard = await (
     await fetch(`${base}${path}?dashboard`, { headers: { cookie: owner } })

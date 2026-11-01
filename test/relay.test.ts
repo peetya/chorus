@@ -1,8 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { addDays, choruses, parseChorus } from "../src/choruses.ts";
-import { posts } from "../src/posts.ts";
+import {
+  addDays,
+  choruses,
+  parseChorus,
+  type Relay,
+  relaySlots,
+} from "../src/choruses.ts";
+import { type Post, posts } from "../src/posts.ts";
 import { relayTimes } from "../src/time.ts";
+import { relaySunPanel } from "../src/views/relay.ts";
 import {
   finishOpenChoruses,
   listen,
@@ -257,9 +264,13 @@ test("the relay wall shows the sun's path and everyone in slot order, then the f
   );
   assert.match(wall, /href="https:\/\/x.com\/ravi_builds\/status\/1"/);
 
-  const polled = await page(base, `${path}/wall`);
+  // Like the wave: the sun panel and the list are polled apart, the panel full width above the list.
+  const polled = await page(base, `${path}/wall?map`);
   assert.match(polled, /The sun over Reykjavik today/);
   assert.doesNotMatch(polled, /<html/);
+  const list = await page(base, `${path}/wall`);
+  assert.match(list, /Up next/);
+  assert.doesNotMatch(list, /The sun over/);
 
   await (await choruses()).updateOne(
     { _id: id },
@@ -270,6 +281,10 @@ test("the relay wall shows the sun's path and everyone in slot order, then the f
   assert.match(finished, /1 of 2 posts went out/);
   assert.match(finished, /At \d\d:\d\d in Reykjavik\./);
   assert.match(finished, /who spoke when/);
+  // The sun travels the path once (intro.js starts it), and the poster appears as it passes.
+  assert.match(finished, /data-intro/);
+  assert.match(finished, /<animateMotion path="M/);
+  assert.match(finished, /src="\/intro.js"/);
 });
 
 test("the dashboard and My Choruses show the relay's timing", async (t) => {
@@ -309,4 +324,30 @@ test("the form offers a wave or a relay, and keeps the relay's fields after an e
   assert.match(again, /name="kind" value="relay" checked/);
   assert.match(again, /<option value="Europe\/Budapest" selected>/);
   assert.match(again, /<option value="20" selected>20 min/);
+});
+
+test("close slots hang their faces in two rows, so a 30 minute relay still shows who is who", () => {
+  const relay = {
+    _id: "r30",
+    kind: "relay",
+    relayTz: "Europe/Budapest",
+    relayGapMin: 30,
+    day: addDays(1),
+    localTime: "09:00",
+  } as Relay;
+  const names = ["Aiko Tanaka", "Ravi Kumar", "Dana Rossi", "Sam Walker"];
+  const joined = relaySlots(relay)
+    .slice(0, names.length)
+    .map((dueAt, i) => ({
+      name: names[i],
+      post: { dueAt, status: "scheduled", channelTz: "Asia/Tokyo" } as Post,
+    }));
+  const panel = relaySunPanel(relay, joined).value;
+  const faces = [...panel.matchAll(/cy="([\d.]+)" r="6\.4"/g)].map(([, cy]) =>
+    Number(cy),
+  );
+  assert.equal(faces.length, 4);
+  // Every other face hangs lower than its neighbours.
+  assert.ok(faces[1] > faces[0] && faces[1] > faces[2]);
+  assert.match(panel, />AT</);
 });

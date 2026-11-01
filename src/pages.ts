@@ -83,7 +83,12 @@ import { shortName } from "./views/labels.ts";
 import { liveMap } from "./views/map.ts";
 import { myChoruses } from "./views/my-choruses.ts";
 import { cantStart, newChorusForm } from "./views/new-chorus.ts";
-import { relayFinishedPage, relayWall, relayWallPage } from "./views/relay.ts";
+import {
+  relayFinishedPage,
+  relaySunPanel,
+  relayWall,
+  relayWallPage,
+} from "./views/relay.ts";
 import { reviewPage } from "./views/review.ts";
 import { finishedPage, scheduled, wallList, wallPage } from "./views/wall.ts";
 import { aiPage, checkList, writePage } from "./views/write.ts";
@@ -134,7 +139,20 @@ pages.get("/me", async (req, res) => {
       organizer: organizers.get(chorus.ownerId) ?? "someone",
     })),
   ].sort((a, b) => a.chorus.day.localeCompare(b.chorus.day));
-  res.send(page("My Choruses", myChoruses(items), { viewer: viewer(session) }));
+  // A live Chorus's card shows its map, or a relay's sun path.
+  const withPeople = await Promise.all(
+    items.map(async (item) => {
+      if (!isLive(item.chorus)) return item;
+      const { joined, names } = await peopleIn(item.chorus);
+      const people = scheduled(
+        joined.map((post) => ({ name: names.get(post.userId) ?? "?", post })),
+      );
+      return { ...item, people };
+    }),
+  );
+  res.send(
+    page("My Choruses", myChoruses(withPeople), { viewer: viewer(session) }),
+  );
 });
 
 pages.get("/account", async (req, res) => {
@@ -334,7 +352,10 @@ pages.get("/c/:id", async (req, res) => {
     return res.send(
       page(chorus.title, finished(view), {
         viewer: session && viewer(session),
-        script: "copy.js",
+        // Confetti, and the map or sun path drawing itself, only when something went out.
+        script: view.joined.some(({ post }) => post.status === "sent")
+          ? ["copy.js", "confetti.js", "intro.js"]
+          : "copy.js",
       }),
     );
   }
@@ -451,7 +472,11 @@ pages.get("/c/:id/wall", async (req, res) => {
     post,
   }));
   if (isRelay(chorus)) {
-    return res.type("html").send(relayWall(chorus, people).value);
+    const part =
+      "map" in req.query
+        ? relaySunPanel(chorus, people)
+        : relayWall(chorus, people);
+    return res.type("html").send(part.value);
   }
   const part =
     "map" in req.query ? liveMap(scheduled(people)) : wallList(people);

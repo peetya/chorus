@@ -1,6 +1,7 @@
 import type { CheckResult } from "../checks.ts";
 import type { Chorus } from "../choruses.ts";
 import { type Html, html } from "../html.ts";
+import type { ChorusImage } from "../images.ts";
 import type { Post } from "../posts.ts";
 import {
   LATE_MINUTES,
@@ -8,6 +9,7 @@ import {
   SPREAD_MINUTES,
   zonedToUtc,
 } from "../time.ts";
+import { reviewImage } from "./images.ts";
 import { place, serviceName, showDay } from "./labels.ts";
 import { checkList } from "./write.ts";
 
@@ -42,6 +44,7 @@ export function reviewPage(
   chorus: Chorus,
   post: Post,
   result: CheckResult,
+  images: ChorusImage[],
 ): Html {
   const blocked = result.checks.some((check) => check.level === "block");
   const planned = zonedToUtc(
@@ -57,6 +60,7 @@ export function reviewPage(
 </div>
 <div class="review">
   <div class="review-post">${post.text ?? ""}</div>
+  ${reviewImage(images, post)}
   <div data-results>
 ${checkList(result)}
   </div>

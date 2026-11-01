@@ -142,8 +142,11 @@ export const scheduled = new Map<
     owner: string;
     channelId: string;
     draft: boolean;
+    assets: MockAsset[];
   }
 >();
+
+type MockAsset = { image: { url: string; metadata?: { altText?: string } } };
 
 // The posts `npm run mock-data` puts in the database: the id says whose it is and when it goes out, so
 // they still answer after a restart.
@@ -162,6 +165,7 @@ function findScheduled(id: string) {
     owner,
     channelId: "",
     draft: false,
+    assets: [],
   };
 }
 
@@ -215,12 +219,21 @@ export function mockGraphql(
       text: string;
       dueAt: string;
       saveToDraft?: boolean;
+      assets: MockAsset[];
     };
     if (!person.channels.some((c) => c.id === input.channelId)) {
       return { createPost: { message: "Channel not found" } };
     }
     if (!input.text.trim())
       return { createPost: { message: "Text is required" } };
+    // Like Buffer: alt text is required once there is metadata.
+    if (
+      input.assets.some(
+        (asset) => !asset.image?.url || !asset.image.metadata?.altText,
+      )
+    ) {
+      return { createPost: { message: "Image url and altText are required" } };
+    }
     const post = {
       id: `mockpost_${randomBytes(6).toString("hex")}`,
       dueAt: input.dueAt,
@@ -230,6 +243,7 @@ export function mockGraphql(
       owner: person.id,
       channelId: input.channelId,
       draft: Boolean(input.saveToDraft),
+      assets: input.assets,
     });
     const status = input.saveToDraft ? "draft" : "scheduled";
     return { createPost: { post: { ...post, status } } };

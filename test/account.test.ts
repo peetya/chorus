@@ -160,7 +160,7 @@ test("the daily cleanup drops old tokens and drafts, and keeps the wall", async 
   assert.ok(aiko);
 
   const removed = await dailyCleanup();
-  assert.deepEqual(removed, { tokens: 2, texts: 2 });
+  assert.deepEqual(removed, { tokens: 2, texts: 2, images: 0 });
   assert.equal((await userOf("mock_ravi"))?.tokenEnc, undefined);
   assert.equal((await userOf("mock_dana"))?.tokenEnc, undefined);
   assert.ok((await userOf("mock_sam"))?.tokenEnc); // has a Chorus coming up
@@ -188,5 +188,9 @@ test("the cleanup endpoint needs the cron secret", async (t) => {
     headers: { authorization: `Bearer ${"c".repeat(32)}` },
   });
   assert.equal(right.status, 200);
-  assert.deepEqual(Object.keys(await right.json()), ["tokens", "texts"]);
+  assert.deepEqual(Object.keys(await right.json()), [
+    "tokens",
+    "texts",
+    "images",
+  ]);
 });

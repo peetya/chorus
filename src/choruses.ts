@@ -12,7 +12,7 @@ export const TONES = {
 
 export type Tone = keyof typeof TONES;
 
-// What the organizer fills in. Relay and images come later, so every Chorus is a wave for now.
+// What the organizer fills in. Relay comes later, so every Chorus is a wave for now.
 export type ChorusInput = {
   title: string;
   note?: string;

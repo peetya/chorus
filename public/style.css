@@ -1501,3 +1501,217 @@ a.finished-post:hover {
   color: var(--accent-ink);
   border-color: #e8b79a;
 }
+
+/* Images: the organizer's cards on the dashboard, and the picker in the editor */
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: 16px;
+}
+
+.image-card {
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* touch-action: a drag on a phone moves the crosshair, not the page. */
+.focus-pick {
+  position: relative;
+  align-self: center;
+  max-width: 100%;
+  line-height: 0;
+  touch-action: none;
+  user-select: none;
+}
+
+.focus-pick img {
+  display: block;
+  max-width: 100%;
+  max-height: 220px;
+  border-radius: 10px;
+  cursor: crosshair;
+}
+
+/* A crosshair: a ring with a dot, centred on the focus point. */
+.focus-mark {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--accent);
+  pointer-events: none;
+  background: radial-gradient(circle, var(--accent) 3px, transparent 4px);
+}
+
+.image-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.button.small-button {
+  min-height: 44px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.crops {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.crops > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.crops figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.crops img {
+  width: 100%;
+  border-radius: 6px;
+  background: var(--soft);
+}
+
+.crops figcaption {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.image-card .field {
+  gap: 4px;
+}
+
+.image-card .field label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* "Start a Chorus": .field sets display, which would show a hidden add field. */
+.form-images [hidden] {
+  display: none;
+}
+
+.image-pick-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.image-options {
+  flex: 1 1 320px;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.image-option {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.image-option:has(input:checked) {
+  border: 2px solid var(--ink);
+  padding: 7px;
+}
+
+.image-option img,
+.no-image {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--soft);
+}
+
+.no-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  padding: 6px;
+  box-sizing: border-box;
+  border: 1px dashed var(--line);
+  background: #fff;
+}
+
+.image-option > span:last-child {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.image-option input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.image-preview {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.image-preview img {
+  width: 100%;
+  border-radius: 10px;
+}
+
+.image-preview [hidden] {
+  display: none;
+}
+
+.no-image-note {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+  background: var(--soft);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.review-image {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 560px;
+}
+
+.review-image img {
+  width: 100%;
+  border-radius: 10px;
+}

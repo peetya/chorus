@@ -36,6 +36,9 @@ export type Post = {
   answers?: Answer[]; // only from "Draft with AI": the fact check accepts what's in them
   aiUses?: number;
   statusChecks: number;
+  // Which of the Chorus's images, counted round them (see imageFor). It starts as the number of people
+  // who joined before, so the images spread across the group. null is "No image".
+  imageIndex?: number | null;
   joinedAt: Date;
 };
 
@@ -52,6 +55,7 @@ export async function joinChorus(
   userId: string,
   channel: Channel,
 ) {
+  const before = await (await posts()).countDocuments({ chorusId });
   await (await posts()).updateOne(
     { chorusId, userId },
     {
@@ -67,6 +71,7 @@ export async function joinChorus(
         status: "drafting",
         aiShaped: false,
         statusChecks: 0,
+        imageIndex: before,
         joinedAt: new Date(),
       },
     },
@@ -78,14 +83,22 @@ export const MAX_TEXT = 10_000;
 export const MAX_ANSWER = 1000;
 
 // Only while drafting: once a post is scheduled, its text lives in Buffer and changes go through there.
+// imageIndex undefined keeps the image as it is.
 export async function saveText(
   chorusId: string,
   userId: string,
   text: string,
+  imageIndex?: number | null,
 ): Promise<boolean> {
   const { matchedCount } = await (await posts()).updateOne(
     { chorusId, userId, status: "drafting" },
-    { $set: { text: text.slice(0, MAX_TEXT), savedAt: new Date() } },
+    {
+      $set: {
+        text: text.slice(0, MAX_TEXT),
+        savedAt: new Date(),
+        ...(imageIndex !== undefined && { imageIndex }),
+      },
+    },
   );
   return matchedCount === 1;
 }

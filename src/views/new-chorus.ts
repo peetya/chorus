@@ -6,6 +6,8 @@ import {
   TONES,
 } from "../choruses.ts";
 import { type Html, html, raw } from "../html.ts";
+import type { ChorusImage } from "../images.ts";
+import { formImages } from "./images.ts";
 import { showDay } from "./labels.ts";
 
 const REMOVE_ICON = raw(
@@ -45,6 +47,7 @@ ${shown.map((value, i) => row(name, label, value, i + 1, marker))}
 export function newChorusForm(
   input: Partial<ChorusInput>,
   errors: string[],
+  images: ChorusImage[] = [],
 ): Html {
   const errorBox =
     errors.length > 0 &&
@@ -100,6 +103,8 @@ ${list("facts", "The facts everyone can use", "Fact", input.facts ?? [], "+ Add 
 ${list("avoid", html`Please avoid <span class="optional">(optional)</span>`, "Item", input.avoid ?? [], "+ Add something to avoid", "Topics, words or claims you don't want in any post. Posts that go against this list get flagged.", "dash")}
 
 ${list("questions", html`Questions for everyone <span class="optional">(up to 3)</span>`, "Question", input.questions ?? [], "+ Add a question", "These help people find their own angle. They show next to the editor as a guide, and the AI uses them if someone asks it for a draft. Nobody has to answer them.")}
+
+${formImages(images)}
 
 <fieldset class="choices">
 <legend>Tone</legend>

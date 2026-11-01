@@ -2,7 +2,9 @@ import type { Answer } from "../ai.ts";
 import type { CheckResult } from "../checks.ts";
 import { type Chorus, TONES } from "../choruses.ts";
 import { type Html, html } from "../html.ts";
+import type { ChorusImage } from "../images.ts";
 import { MAX_ANSWER, MAX_TEXT, type Post } from "../posts.ts";
+import { imagePicker } from "./images.ts";
 import { place, serviceName, shortName, showDay } from "./labels.ts";
 
 export function checkList(result: CheckResult): Html {
@@ -50,6 +52,7 @@ export function writePage(
   saved: boolean,
   ai: AiOffer,
   drafted: boolean,
+  images: ChorusImage[],
 ): Html {
   return html`<div class="page-head">
   <a href="/c/${chorus._id}" class="back">${chorus.title}</a>
@@ -74,6 +77,7 @@ ${drafted && html`<p class="notice" role="status">Here's a draft from your answe
 ${checkList(result)}
     </div>
   </div>
+  ${imagePicker(images, post, organizer)}
   <div class="actions inline">
     <button type="submit" class="button primary" name="action" value="approve">Approve and schedule</button>
     <button type="submit" class="button">Save draft</button>

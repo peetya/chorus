@@ -289,6 +289,7 @@ export async function createPost(
     dueAt: Date;
     aiAssisted: boolean;
     saveToDraft: boolean; // the post lands in the person's Buffer drafts, not the queue
+    image?: { url: string; alt: string }; // Buffer fetches the URL when the post goes out
   },
 ): Promise<Scheduled> {
   const { createPost: result } = await graphql<{
@@ -300,7 +301,17 @@ export async function createPost(
       schedulingType: "automatic",
       mode: "customScheduled",
       dueAt: post.dueAt.toISOString(),
-      assets: [],
+      // altText is required once metadata is sent, and every image has one.
+      assets: post.image
+        ? [
+            {
+              image: {
+                url: post.image.url,
+                metadata: { altText: post.image.alt },
+              },
+            },
+          ]
+        : [],
       needsApproval: false,
       aiAssisted: post.aiAssisted,
       saveToDraft: post.saveToDraft,

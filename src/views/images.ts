@@ -40,7 +40,7 @@ function crops(image: ChorusImage): Html {
     <div>
     ${CROP_LABELS.map(
       ([crop, label]) =>
-        html`<figure><img src="${image.urls[crop]}" alt="" data-crop="${crop}"><figcaption>${label}</figcaption></figure>`,
+        html`<figure><button type="button" class="crop-open" data-crop-open aria-label="Show the ${label} crop larger"><img src="${image.urls[crop]}" alt="" data-crop="${crop}"></button><figcaption>${label}</figcaption></figure>`,
     )}
     </div>
   </div>`;
@@ -75,6 +75,10 @@ ${images.map(formImageCard)}
   <input id="image-file" type="file" accept="image/jpeg,image/png,image/webp">
 </div>
 <div class="errors" role="alert" data-image-error hidden></div>
+<dialog class="crop-view" data-crop-view aria-label="Crop">
+  <img src="" alt="">
+  <div class="crop-view-foot"><span class="small-label"></span><button type="button" class="button" data-close>Close</button></div>
+</dialog>
 </fieldset>`;
 }
 

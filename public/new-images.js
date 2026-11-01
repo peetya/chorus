@@ -1,5 +1,5 @@
-// "Start a Chorus": each image uploads as soon as it's picked, so a form error doesn't lose it. focus.js
-// moves the focus points.
+// "Start a Chorus": each image uploads as soon as it's picked, so a form error doesn't lose it. A click on
+// a crop shows it larger. focus.js moves the focus points.
 const box = document.querySelector("[data-images]");
 
 if (box) {
@@ -41,7 +41,23 @@ if (box) {
     }
   });
 
+  const view = box.querySelector("[data-crop-view]");
+  view.addEventListener("click", (event) => {
+    // A click on the dimmed page around it lands on the dialog itself.
+    if (event.target === view || event.target.closest("[data-close]")) {
+      view.close();
+    }
+  });
+
   list.addEventListener("click", async (event) => {
+    const open = event.target.closest("[data-crop-open]");
+    if (open) {
+      view.querySelector("img").src = open.querySelector("img").src;
+      view.querySelector(".small-label").textContent =
+        open.nextElementSibling.textContent;
+      view.showModal();
+      return;
+    }
     const card = event.target.closest("[data-image]");
     if (!card || !event.target.closest("[data-remove-image]")) return;
     card.remove();

@@ -1592,6 +1592,43 @@ a.finished-post:hover {
   background: var(--soft);
 }
 
+.crop-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+/* A crop at a size you can judge. */
+.crop-view {
+  max-width: min(90vw, 960px);
+  padding: 12px;
+  border: 0;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.crop-view::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+
+.crop-view img {
+  display: block;
+  max-width: 100%;
+  max-height: 75vh;
+  border-radius: 8px;
+}
+
+.crop-view-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
 .crops figcaption {
   font-size: 12px;
   color: var(--muted);

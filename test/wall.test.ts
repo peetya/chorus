@@ -157,6 +157,10 @@ test("on the day the wall shows who posted, with links to the real posts", async
     await fetch(`${base}/me`, { headers: { cookie: owner } })
   ).text();
   assert.match(mine, /<h2>Live now<\/h2>/);
+  // The live card brings the wave's map and its count.
+  assert.match(mine, /class="chorus-card live"/);
+  assert.match(mine, /1 of 4 posted/);
+  assert.match(mine, /class="world-map"/);
 });
 
 test("a Chorus days away has no wall yet", async (t) => {

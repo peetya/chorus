@@ -7,7 +7,11 @@ import {
   isRelay,
 } from "../choruses.ts";
 import { type Html, html } from "../html.ts";
-import { shortName, showDay, timing } from "./labels.ts";
+import type { Post } from "../posts.ts";
+import { localTime } from "../time.ts";
+import { place, shortName, showDay, timing } from "./labels.ts";
+import { liveMap, until as timeLeft } from "./map.ts";
+import { relaySun } from "./relay.ts";
 
 // Empty for yesterday: a wave still runs in the last time zones then, so it isn't done yet.
 export function until(day: string): string {
@@ -19,10 +23,26 @@ export function until(day: string): string {
   return days === 1 ? "tomorrow" : `in ${days} days`;
 }
 
-// organizer is null for your own Choruses.
-export type MyChorus = { chorus: Chorus; organizer: string | null };
+// organizer is null for your own Choruses. people is set only for a live Chorus: its scheduled posts,
+// earliest first, for the map or the sun path on its card.
+export type MyChorus = {
+  chorus: Chorus;
+  organizer: string | null;
+  people?: { name: string; post: Post & { dueAt: Date } }[];
+};
 
-function card({ chorus, organizer }: MyChorus, done: boolean): Html {
+function status(chorus: Chorus, people: NonNullable<MyChorus["people"]>): Html {
+  if (people.length === 0)
+    return html`<span class="muted">No posts are scheduled yet</span>`;
+  const now = new Date();
+  const sent = people.filter(({ post }) => post.status === "sent").length;
+  const next = people.find(
+    ({ post }) => post.status !== "sent" && post.dueAt > now,
+  );
+  return html`<span><strong class="live-count">${sent} of ${people.length} posted</strong>${next && html`<span class="muted"> · next: ${shortName(next.name)} ${isRelay(chorus) ? `at ${localTime(next.post.dueAt, chorus.relayTz)}` : `in ${place(next.post.channelTz)}`}, in ${timeLeft(next.post.dueAt, now)}</span>`}</span>`;
+}
+
+function card({ chorus, organizer, people }: MyChorus, done: boolean): Html {
   const when = done
     ? `Done · ${showDay(chorus.day)}`
     : isLive(chorus)
@@ -31,10 +51,20 @@ function card({ chorus, organizer }: MyChorus, done: boolean): Html {
   const role = organizer
     ? `You joined · organized by ${shortName(organizer)}`
     : "You organize";
-  return html`<a href="/c/${chorus._id}" class="chorus-card${done && " done"}">
-  <span class="pill">${when}</span>
+  const text = html`<span class="pill">${when}</span>
   <span class="chorus-title">${chorus.title}</span>
-  <span class="muted">${role} · ${isRelay(chorus) ? `Relay ${timing(chorus)}` : html`at <span class="mono">${chorus.localTime}</span> in each person's time zone`}</span>
+  <span class="muted">${role} · ${isRelay(chorus) ? `Relay ${timing(chorus)}` : html`at <span class="mono">${chorus.localTime}</span> in each person's time zone`}</span>`;
+  if (people) {
+    return html`<a href="/c/${chorus._id}" class="chorus-card live">
+  <span class="live-text">
+  ${text}
+  ${status(chorus, people)}
+  </span>
+  ${isRelay(chorus) ? relaySun(chorus, people) : liveMap(people)}
+</a>`;
+  }
+  return html`<a href="/c/${chorus._id}" class="chorus-card${done && " done"}">
+  ${text}
 </a>`;
 }
 

@@ -3,6 +3,7 @@ import type { Post } from "../posts.ts";
 import { daylightPath } from "../sun.ts";
 import { localTime, offsetMs } from "../time.ts";
 import { PLACES } from "../zones.ts";
+import { along, appearAt, drawLine } from "./intro.ts";
 import { place } from "./labels.ts";
 
 type Scheduled = { name: string; post: Post & { dueAt: Date } };
@@ -45,7 +46,7 @@ function who(spot: Spot): string {
   return n > 1 ? `${place(spot.zone)} (${n} people)` : place(spot.zone);
 }
 
-function until(at: Date, now: Date): string {
+export function until(at: Date, now: Date): string {
   const minutes = Math.max(
     1,
     Math.round((at.getTime() - now.getTime()) / 60_000),
@@ -65,7 +66,7 @@ function dot(spot: Spot, next: boolean): Html {
   if (posted(spot)) {
     return html`<g class="map-posted"><circle cx="${x}" cy="${y}" r="${r + 2.6}" fill="rgba(252,211,77,0.2)"/><circle cx="${x}" cy="${y}" r="${r}" fill="#FCD34D"/><use href="#bubble" fill="#FCD34D" transform="translate(${(x - 0.9).toFixed(1)} ${(y - 11.6).toFixed(1)}) scale(0.036)"/>${count}</g>`;
   }
-  return html`<g>${next && html`<circle cx="${x}" cy="${y}" r="${r + 1.6}" fill="none" stroke="#FB923C" stroke-width="0.6"/>`}<circle cx="${x}" cy="${y}" r="${r}" fill="#131829" stroke="${next ? "#FB923C" : "#F2F4F8"}" stroke-width="0.7"/>${count}</g>`;
+  return html`<g>${next && html`<circle class="map-pulse" cx="${x}" cy="${y}" r="${r + 1.6}" fill="none" stroke="#FB923C" stroke-width="0.6"/>`}<circle cx="${x}" cy="${y}" r="${r}" fill="#131829" stroke="${next ? "#FB923C" : "#F2F4F8"}" stroke-width="0.7"/>${count}</g>`;
 }
 
 function label(spot: Spot, text: string, color = "#C8CEDA"): Html {
@@ -74,11 +75,11 @@ function label(spot: Spot, text: string, color = "#C8CEDA"): Html {
   return html`<text class="map-label" x="${spot.x}" y="${y.toFixed(1)}" text-anchor="middle" font-family="${MONO}" font-size="3" fill="${color}">${text}</text>`;
 }
 
-function frame(aria: string, inside: Html): Html {
+function frame(aria: string, inside: Html, intro = false): Html {
   return html`<figure class="world-map">
   <div class="map-frame">
     <img src="/world.svg" alt="">
-    <svg viewBox="0 0 360 144" role="img" aria-label="${aria}"><defs>${BUBBLE}<filter id="soft" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="1.4"/></filter></defs>${inside}</svg>
+    <svg viewBox="0 0 360 144" role="img" aria-label="${aria}"${intro && " data-intro"}><defs>${BUBBLE}<filter id="soft" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="1.4"/></filter></defs>${inside}</svg>
   </div>
   <figcaption class="hint">Places show each person's time zone, not where they live. A number on a dot means several people share that time zone.</figcaption>
 </figure>`;
@@ -115,9 +116,11 @@ export function finishedMap(entries: Scheduled[]): Html {
   const route = spots(sent);
   const first = route[0];
   const last = route.at(-1);
+  // The line draws itself in the order the posts went out, and each place lights up as it gets there.
+  const reached = along(route.map(({ x, y }): [number, number] => [x, y]));
   const line =
     route.length > 1 &&
-    html`<path class="map-route" fill="none" stroke="rgba(251,146,60,0.75)" stroke-width="0.6" stroke-linecap="round" stroke-linejoin="round" d="M${route.map(({ x, y }) => `${x} ${y}`).join("L")}"/>`;
+    html`<path class="map-route" fill="none" stroke="rgba(251,146,60,0.75)" stroke-width="0.6" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" d="M${route.map(({ x, y }) => `${x} ${y}`).join("L")}">${drawLine()}</path>`;
   const time = (spot: Spot) =>
     `${localTime(spot.people[0].post.dueAt, "UTC")} UTC`;
   return frame(
@@ -125,8 +128,9 @@ export function finishedMap(entries: Scheduled[]): Html {
       ? `World map. A line traces the posts in the order they went out: ${route.map(who).join(", ")}.`
       : `World map with the posts from ${route.map(who).join(", ") || "nowhere yet"}.`,
     html`${line}
-${route.map((spot) => dot(spot, false))}
+${route.map((spot, i) => html`<g>${appearAt(reached[i])}${dot(spot, false)}</g>`)}
 ${first && label(first, `${place(first.zone)} · first, ${time(first)}`)}
-${last && last !== first && label(last, `${place(last.zone)} · last, ${time(last)}`)}`,
+${last && last !== first && html`<g>${appearAt(1)}${label(last, `${place(last.zone)} · last, ${time(last)}`)}</g>`}`,
+    true,
   );
 }

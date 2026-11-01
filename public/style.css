@@ -1323,6 +1323,31 @@ h2.sub-title {
   display: block;
 }
 
+@keyframes map-pulse {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.9;
+  }
+  70%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* The ring around the next place. It stays still under reduced motion. */
+.map-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: map-pulse 2.8s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-pulse {
+    animation: none;
+  }
+}
+
 .wall {
   flex: 1 1 560px;
   min-width: 0;
@@ -1887,9 +1912,10 @@ a.finished-post:hover {
   }
 }
 
-/* On a phone the names would be a few pixels tall; the list below says the same. */
+/* On a phone the faces and names would be a few pixels tall: just the dots, and the list below has the names. */
 @media (max-width: 600px) {
-  .sun-label {
+  .sun-label,
+  .sun-face {
     display: none;
   }
 }
@@ -1901,4 +1927,163 @@ a.finished-post:hover {
 
 .wall-post.next .wall-state {
   color: var(--accent-ink);
+}
+
+/* The finished page's confetti, over everything and never in the way of a click */
+.confetti {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* The landing page: text on the left, the world map on the right, the map under the text on a phone */
+
+/* The dark part fills the screen, so no white strip is left under it. */
+.landing {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background: #131829;
+  color: #f2f4f8;
+}
+
+.landing .top a {
+  color: #f2f4f8;
+}
+
+.landing .top a:hover {
+  color: #fdba74;
+}
+
+.landing .top {
+  border-color: transparent;
+}
+
+.landing .hero p {
+  color: #c8ceda;
+}
+
+main.landing-hero {
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  flex-flow: row wrap;
+  align-content: center;
+  align-items: center;
+  gap: 48px;
+}
+
+.landing-hero .hero {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.hero-map {
+  flex: 2 1 640px;
+  min-width: 0;
+  border-radius: 0;
+}
+
+@keyframes hero-band {
+  0% {
+    transform: translateX(318px);
+    opacity: 0;
+  }
+  5%,
+  72% {
+    opacity: 1;
+  }
+  80%,
+  100% {
+    transform: translateX(-110px);
+    opacity: 0;
+  }
+}
+
+/* Starts 40% into the loop, at the still frame below, so the first look has six cities lit. */
+.hero-band {
+  animation: hero-band 56s linear -22.4s infinite;
+}
+
+/* A city fades out slowly at the end of the loop, and pops in with a small overshoot when it's lit. */
+.hero-dot {
+  transform-box: view-box;
+  opacity: 0;
+  transform: scale(0.3);
+  transition:
+    opacity 2.5s,
+    transform 0s 2.5s;
+}
+
+.hero-dot.lit {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.3s,
+    transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-band {
+    animation: none;
+  }
+
+  .hero-dot,
+  .hero-dot.lit {
+    transition: none;
+  }
+}
+
+/* A live wave: a dark card with the live map next to the text, under it on a phone */
+.chorus-card.live {
+  flex-basis: 100%;
+  flex-flow: row wrap;
+  align-items: center;
+  gap: 28px;
+  background: #0e1220;
+  border-color: #0e1220;
+  color: #f2f4f8;
+}
+
+a.chorus-card.live:hover {
+  border-color: #4a5470;
+  color: #f2f4f8;
+}
+
+.live-text {
+  flex: 1 1 300px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.live .pill {
+  background: none;
+  border: 1px solid #5a3a22;
+  color: #fb923c;
+}
+
+.live .muted {
+  color: #a3abba;
+}
+
+.live-count {
+  color: #fcd34d;
+}
+
+.live .world-map,
+.live .sun-frame {
+  flex: 1.6 1 420px;
+  min-width: 0;
+}
+
+/* The card's text says who's next, so the map needs no labels or note. */
+.live .map-label,
+.live .sun-label,
+.live .hint {
+  display: none;
 }

@@ -99,6 +99,14 @@ test("the finished map draws the route in the order the posts went out", () => {
   assert.match(map, /d="M319.7 48.3L199.1 36.5L/);
   assert.match(map, />Tokyo · first, 00:04 UTC</);
   assert.match(map, />Los Angeles · last, 17:00 UTC</);
+  // The line draws itself, and each place appears when it gets there: Tokyo first, Los Angeles last.
+  assert.match(map, /data-intro/);
+  assert.match(map, /pathLength="1" stroke-dasharray="1"/);
+  const reached = [...map.matchAll(/keyTimes="0;([\d.]+);/g)].map(([, at]) =>
+    Number(at),
+  );
+  assert.equal(reached[0], 0);
+  assert.ok(reached.every((at, i) => i === 0 || at >= reached[i - 1]));
 });
 
 test("a time zone the list doesn't know goes on the equator at its offset", () => {

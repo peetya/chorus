@@ -4,6 +4,7 @@ import { placeOf, sunHeight, sunTimes } from "../sunrise.ts";
 import { localTime, zonedToUtc } from "../time.ts";
 import type { ChorusView, Joined } from "./chorus.ts";
 import { joinBox } from "./chorus.ts";
+import { along, appearAt, drawLine, travel } from "./intro.ts";
 import {
   initials,
   ordinal,
@@ -50,8 +51,14 @@ function nextUp(entries: Entry[], now: number | null): Entry | undefined {
 const firstName = (name: string) => shortName(name).split(" ")[0];
 
 // The sun's path over the relay's city that day, and everyone on it at their time. now is null on the
-// finished page: then the whole path is gold and there is no sun.
-function sunPath(chorus: Relay, entries: Entry[], now: number | null): Html {
+// finished page: then the whole path is gold and there is no sun. small is the card on My Choruses: dots
+// only, no faces.
+function sunPath(
+  chorus: Relay,
+  entries: Entry[],
+  now: number | null,
+  small = false,
+): Html {
   const zone = chorus.relayTz;
   const { lat, lon } = placeOf(zone);
   const slots = relaySlots(chorus);
@@ -81,7 +88,14 @@ function sunPath(chorus: Relay, entries: Entry[], now: number | null): Html {
     part.length > 1
       ? `M${part.map((at) => `${fixed(x(at))} ${fixed(y(at))}`).join("L")}`
       : "";
+  const finished = now === null;
   const past = now === null ? arc : arc.filter((at) => at <= now);
+  // On the finished page the sun travels the path once, drawing it, and each person appears as it passes.
+  const reached = along(past.map((at): [number, number] => [x(at), y(at)]));
+  const passed = (at: number) => {
+    const i = past.findIndex((time) => time >= at);
+    return i < 0 ? 1 : reached[i];
+  };
   const ahead = now === null ? [] : arc.filter((at) => at >= now);
   const glow =
     past.length > 1 &&
@@ -107,11 +121,16 @@ function sunPath(chorus: Relay, entries: Entry[], now: number | null): Html {
     ? [edge(sun.sunrise, "sunrise"), edge(sun.sunset, "sunset")]
     : html`<text class="sun-label" x="180" y="136.5">${peak > 0 ? "The sun doesn't set today" : "The sun doesn't rise today"}</text>`;
 
-  // Faces and names only when there is room for them. Close slots (every 20 min) get just their dots,
-  // and the list below the drawing has the names.
+  // Faces and names hang below the path. Close slots take turns between two rows so they don't overlap;
+  // when even that is too tight, just the dots, and the list below the drawing has the names.
   const room = ((chorus.relayGapMin * MINUTE) / (to - from)) * (RIGHT - LEFT);
   const next = nextUp(entries, now);
-  const people = entries.map((entry) => {
+  const people = entries.map((entry, i) => {
+    const at = entry.post.dueAt.getTime();
+    const person = onPath(entry, i);
+    return finished ? html`<g>${appearAt(passed(at))}${person}</g>` : person;
+  });
+  function onPath(entry: Entry, i: number): Html {
     const { post, name } = entry;
     const at = post.dueAt.getTime();
     const px = x(at);
@@ -121,8 +140,12 @@ function sunPath(chorus: Relay, entries: Entry[], now: number | null): Html {
     const dot = posted
       ? html`<circle cx="${fixed(px)}" cy="${fixed(py)}" r="2.4" fill="#FCD34D"/>`
       : html`<circle cx="${fixed(px)}" cy="${fixed(py)}" r="${isNext ? 2.4 : 2.1}" fill="#131829" stroke="${isNext ? "#FB923C" : "#7C8598"}" stroke-width="0.8"/>`;
-    if (room < 14) return dot;
-    const cy = Math.min(py + 17, 96);
+    if (small || room < 7) return dot;
+    const rows = room < 14;
+    const cy =
+      rows && i % 2 === 1
+        ? Math.min(py + 39, 96)
+        : Math.min(py + 17, rows ? 74 : 96);
     const colors = posted
       ? { fill: "#FCD34D", stroke: "#FCD34D", text: "#0E1220", name: "#F2F4F8" }
       : isNext
@@ -138,12 +161,12 @@ function sunPath(chorus: Relay, entries: Entry[], now: number | null): Html {
             text: "#C8CEDA",
             name: "#C8CEDA",
           };
-    return html`${cy - 6.4 > py + 3 && html`<path d="M${fixed(px)} ${fixed(py + 3)}V${fixed(cy - 6.4)}" stroke="${posted ? "rgba(252,211,77,0.55)" : "#39425A"}" stroke-width="0.5"/>`}${dot}
+    return html`${dot}<g class="sun-face">${cy - 6.4 > py + 3 && html`<path d="M${fixed(px)} ${fixed(py + 3)}V${fixed(cy - 6.4)}" stroke="${posted ? "rgba(252,211,77,0.55)" : "#39425A"}" stroke-width="0.5"/>`}
 <circle cx="${fixed(px)}" cy="${fixed(cy)}" r="6.4" fill="${colors.fill}" stroke="${colors.stroke}" stroke-width="0.7"/>
 <g class="sun-label" font-family="${SANS}" font-weight="600"><text x="${fixed(px)}" y="${fixed(cy + 1.8)}" font-size="4.6" fill="${colors.text}">${initials(name)}</text>
 <text x="${fixed(px)}" y="${fixed(cy + 11)}" font-size="3.5" fill="${colors.name}">${firstName(name)}${isNext && " · next"}</text></g>
-<text class="sun-label" x="${fixed(px)}" y="${fixed(cy + 15.3)}" font-family="${MONO}" font-size="3.1" fill="${isNext ? "#FDBA74" : "#A3ABBA"}">${localTime(post.dueAt, zone)}</text>`;
-  });
+<text class="sun-label" x="${fixed(px)}" y="${fixed(cy + 15.3)}" font-family="${MONO}" font-size="3.1" fill="${isNext ? "#FDBA74" : "#A3ABBA"}">${localTime(post.dueAt, zone)}</text></g>`;
+  }
 
   const showNow = now !== null && now > from && now < to;
   const nowMark =
@@ -158,18 +181,29 @@ ${height(now) > 0 && html`<circle class="sun-glow" cx="${fixed(x(now))}" cy="${f
     : "";
   const label = `The sun's path over ${place(zone)} on ${showDay(chorus.day)}${daylight}. ${count(entries.length, "person takes", "people take")} turns along it, ${posted} posted so far.`;
   return html`<div class="sun-frame">
-<svg viewBox="0 0 360 142" role="img" aria-label="${label}">
+<svg viewBox="0 0 360 142" role="img" aria-label="${label}"${finished && " data-intro"}>
 <g font-family="${MONO}" font-size="2.9" fill="#7C8598" text-anchor="middle">${ticks}${sunLabels}</g>
 <path d="M${LEFT} ${HORIZON}H${RIGHT}" stroke="#39425A" stroke-width="0.6"/>
-${glow && html`<path d="${glow}" fill="rgba(251,146,60,0.07)"/>`}
+${glow && html`<path d="${glow}" fill="rgba(251,146,60,0.07)">${finished && appearAt(1)}</path>`}
 ${ahead.length > 1 && html`<path d="${line(ahead)}" fill="none" stroke="#4A5470" stroke-width="0.8" stroke-dasharray="2 2"/>`}
-${past.length > 1 && html`<path d="${line(past)}" fill="none" stroke="rgba(251,146,60,0.22)" stroke-width="3.2" stroke-linecap="round"/><path d="${line(past)}" fill="none" stroke="#FCD34D" stroke-width="1" stroke-linecap="round"/>`}
+${
+  past.length > 1 &&
+  (finished
+    ? html`<path d="${line(past)}" fill="none" stroke="rgba(251,146,60,0.22)" stroke-width="3.2" stroke-linecap="round" pathLength="1" stroke-dasharray="1">${drawLine()}</path><path d="${line(past)}" fill="none" stroke="#FCD34D" stroke-width="1" stroke-linecap="round" pathLength="1" stroke-dasharray="1">${drawLine()}</path>`
+    : html`<path d="${line(past)}" fill="none" stroke="rgba(251,146,60,0.22)" stroke-width="3.2" stroke-linecap="round"/><path d="${line(past)}" fill="none" stroke="#FCD34D" stroke-width="1" stroke-linecap="round"/>`)
+}
 <g text-anchor="middle">
 ${nowMark}
 ${people}
 </g>
+${finished && past.length > 1 && html`<g opacity="0"><circle r="6" fill="rgba(252,211,77,0.18)"/><circle r="3.4" fill="#FCD34D"/>${travel(line(past))}</g>`}
 </svg>
 </div>`;
+}
+
+// The sun path alone, for a live relay's card on My Choruses.
+export function relaySun(chorus: Relay, entries: Entry[]): Html {
+  return sunPath(chorus, entries, Date.now(), true);
 }
 
 function row(
@@ -188,7 +222,18 @@ function row(
 </li>`;
 }
 
-// The live relay: the sun, then everyone in slot order. Polled every minute by wall.js, like the wave's.
+// The live relay's sun, full width above the lists like the wave's map. Polled every minute by wall.js.
+export function relaySunPanel(chorus: Relay, joined: Joined[]): Html {
+  return html`<section class="sun-panel">
+  <div class="sun-head">
+    <h2 class="sun-title">The sun over ${place(chorus.relayTz)} today</h2>
+    <span class="sun-legend" aria-hidden="true"><span class="key posted"></span>Posted <span class="key next"></span>Next <span class="key waiting"></span>Waiting for their turn</span>
+  </div>
+  ${sunPath(chorus, scheduled(joined), Date.now())}
+</section>`;
+}
+
+// Everyone in slot order, next to the join box. Polled every minute by wall.js, like the wave's list.
 export function relayWall(chorus: Relay, joined: Joined[]): Html {
   const now = Date.now();
   const entries = scheduled(joined);
@@ -204,13 +249,6 @@ export function relayWall(chorus: Relay, joined: Joined[]): Html {
   <ul>${items.map((entry) => row(entry, chorus, next, now))}</ul>
 </section>`;
   return html`<p class="wall-count"><strong>${out} of ${entries.length}</strong> ${entries.length === 1 ? "post is" : "posts are"} out${next && html` <span class="muted">· next: ${shortName(next.name)} at ${localTime(next.post.dueAt, chorus.relayTz)}, in ${inTime(next.post.dueAt, now)}</span>`}${writing > 0 && html` <span class="muted">· ${writing === 1 ? "1 person is" : `${writing} people are`} still writing</span>`}</p>
-<section class="sun-panel">
-  <div class="sun-head">
-    <h2 class="sun-title">The sun over ${place(chorus.relayTz)} today</h2>
-    <span class="sun-legend" aria-hidden="true"><span class="key posted"></span>Posted <span class="key next"></span>Next <span class="key waiting"></span>Waiting for their turn</span>
-  </div>
-  ${sunPath(chorus, entries, now)}
-</section>
 ${
   entries.length === 0
     ? html`<p class="empty">No posts are scheduled yet.</p>`
@@ -226,6 +264,9 @@ export function relayWallPage(view: ChorusView): Html {
   <h1>${chorus.title}</h1>
   <p class="mono muted">${showDay(chorus.day)} · ${timing(chorus)}</p>
   ${isOrganizer && html`<a href="/c/${chorus._id}?dashboard" class="small">Open your dashboard</a>`}
+</div>
+<div data-wall="/c/${chorus._id}/wall?map">
+${relaySunPanel(chorus, view.joined)}
 </div>
 <div class="layout">
 <div class="wall" data-wall="/c/${chorus._id}/wall">

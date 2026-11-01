@@ -10,8 +10,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Instrument+Sans:wght@400..700&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="/style.css">
+  <script src="/landing.js" defer></script>
 </head>
 <body>
+  <div class="landing">
   <header class="top">
     <div>
       <a href="/" class="brand"><img src="/logo.svg" alt="" width="24" height="24"><span>chorus</span></a>
@@ -20,12 +22,39 @@
       </nav>
     </div>
   </header>
-  <main>
+  <main class="landing-hero">
     <div class="hero">
       <h1>Announce news together</h1>
       <p>Everyone writes their own post, in their own words, and it goes out from their own Buffer account at the same local time: 9:00 in Tokyo, then in Budapest, then in San Francisco.</p>
       <a href="/new" class="button primary">Start a Chorus</a>
     </div>
+    <div class="map-frame hero-map">
+      <img src="/world.svg" alt="">
+      <!-- A still frame with six cities lit. landing.js moves it, unless the reader asked for less motion. -->
+      <svg viewBox="0 0 360 144" role="img" aria-label="World map. A band of morning light moves slowly west. When it reaches a person, their post goes out and a small chat bubble appears above them.">
+        <defs>
+          <path id="bubble" d="M116.5 4C52.3 4 0 45.3 0 96c0 28.6 16.7 55.2 45.9 72.9 4.5 2.7 7.6 7.3 8.6 12.5 2.9 16-1 32.9-6.8 47.6 19.2-9.1 39.1-23.2 54.8-36.6 3.9-3.3 9.1-4.7 14.1-4.4C180.8 188 233 146.7 233 96 233 45.3 180.8 4 116.5 4z"/>
+          <filter id="soft" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="1.4"/></filter>
+        </defs>
+        <g class="hero-band" style="transform: translateX(104px)"><path filter="url(#soft)" fill="rgba(251,146,60,0.16)" d="M32.4 144L40 138.3L50 125.2L60 102.3L70 71.5L80 46.5L90 31.8L100 23.4L110 18.4L120 15.3L130 13.3L140 12.2L150 11.6L160 11.5L170 12L180 13L190 14.8L200 17.7L210 22.2L220 29.7L230 42.8L240 65.7L250 96.5L260 121.5L270 136.2L279.3 144Z"/><path fill="none" stroke="rgba(251,146,60,0.6)" stroke-width="0.5" stroke-dasharray="1.5 1.5" d="M32.4 144L40 138.3L50 125.2L60 102.3L70 71.5L80 46.5L90 31.8L100 23.4L110 18.4L120 15.3"/></g>
+        <g fill="#131829" stroke="#C8CEDA" stroke-width="0.7"><circle cx="354.8" cy="120.8" r="2.2"/><circle cx="331.2" cy="117.9" r="2.2"/><circle cx="319.7" cy="48.3" r="2.2"/><circle cx="257.6" cy="71" r="2.2"/><circle cx="183.4" cy="77.5" r="2.2"/><circle cx="199" cy="36.5" r="2.2"/><circle cx="179.9" cy="32.5" r="2.2"/><circle cx="170.9" cy="45.3" r="2.2"/><circle cx="133.4" cy="107.6" r="2.2"/><circle cx="106" cy="43.3" r="2.2"/><circle cx="80.9" cy="64.6" r="2.2"/><circle cx="57.6" cy="46.2" r="2.2"/></g>
+        <!-- Auckland, Sydney, Tokyo, Bengaluru, Lagos, Budapest, London, Lisbon, São Paulo, New York, Mexico City,
+             San Francisco. data-at is the point in the loop where the morning reaches the city. -->
+        <g class="hero-dot lit" data-at="0.0282" style="transform-origin: 354.8px 120.8px"><circle cx="354.8" cy="120.8" r="5.2" fill="rgba(252,211,77,0.22)"/><circle cx="354.8" cy="120.8" r="2.6" fill="#FCD34D"/><use href="#bubble" fill="#FCD34D" transform="translate(355.72 109.16) scale(-0.036 0.036)"/></g>
+        <g class="hero-dot lit" data-at="0.0748" style="transform-origin: 331.2px 117.9px"><circle cx="331.2" cy="117.9" r="5.2" fill="rgba(252,211,77,0.22)"/><circle cx="331.2" cy="117.9" r="2.6" fill="#FCD34D"/><use href="#bubble" fill="#FCD34D" transform="translate(330.28 106.26) scale(0.036)"/></g>
+        <g class="hero-dot lit" data-at="0.145" style="transform-origin: 319.7px 48.3px"><circle cx="319.7" cy="48.3" r="5.2" fill="rgba(252,211,77,0.22)"/><circle cx="319.7" cy="48.3" r="2.6" fill="#FCD34D"/><use href="#bubble" fill="#FCD34D" transform="translate(318.78 36.66) scale(0.036)"/></g>
+        <g class="hero-dot lit" data-at="0.2441" style="transform-origin: 257.6px 71px"><circle cx="257.6" cy="71" r="5.2" fill="rgba(252,211,77,0.22)"/><circle cx="257.6" cy="71" r="2.6" fill="#FCD34D"/><use href="#bubble" fill="#FCD34D" transform="translate(256.68 59.36) scale(0.036)"/></g>
+        <g class="hero-dot lit" data-at="0.3789" style="transform-origin: 183.4px 77.5px"><circle cx="183.4" cy="77.5" r="5.2" fill="rgba(252,211,77,0.22)"/><circle cx="183.4" cy="77.5" r="2.6" fill="#FCD34D"/><use href="#bubble" fill="#FCD34D" transform="translate(182.48 65.86) scale(0.036)"/></g>
+        <g class="hero-dot lit" data-at="0.3847" style="transform-origin: 199px 36.5px"><circle cx="199" cy="36.5" r="5.2" fill="rgba(252,211,77,0.22)"/><circle cx="199" cy="36.5" r="2.6" fill="#FCD34D"/><use href="#bubble" fill="#FCD34D" transform="translate(198.08 24.86) scale(0.036)"/></g>
+        <g class="hero-dot" data-at="0.4254" style="transform-origin: 179.9px 32.5px"><circle cx="179.9" cy="32.5" r="5.2" fill="rgba(252,211,77,0.22)"/><circle cx="179.9" cy="32.5" r="2.6" fill="#FCD34D"/><use href="#bubble" fill="#FCD34D" transform="translate(178.98 20.86) scale(0.036)"/></g>
+        <g class="hero-dot" data-at="0.426" style="transform-origin: 170.9px 45.3px"><circle cx="170.9" cy="45.3" r="5.2" fill="rgba(252,211,77,0.22)"/><circle cx="170.9" cy="45.3" r="2.6" fill="#FCD34D"/><use href="#bubble" fill="#FCD34D" transform="translate(169.98 33.66) scale(0.036)"/></g>
+        <g class="hero-dot" data-at="0.4529" style="transform-origin: 133.4px 107.6px"><circle cx="133.4" cy="107.6" r="5.2" fill="rgba(252,211,77,0.22)"/><circle cx="133.4" cy="107.6" r="2.6" fill="#FCD34D"/><use href="#bubble" fill="#FCD34D" transform="translate(132.48 95.96) scale(0.036)"/></g>
+        <g class="hero-dot" data-at="0.5499" style="transform-origin: 106px 43.3px"><circle cx="106" cy="43.3" r="5.2" fill="rgba(252,211,77,0.22)"/><circle cx="106" cy="43.3" r="2.6" fill="#FCD34D"/><use href="#bubble" fill="#FCD34D" transform="translate(105.08 31.66) scale(0.036)"/></g>
+        <g class="hero-dot" data-at="0.5793" style="transform-origin: 80.9px 64.6px"><circle cx="80.9" cy="64.6" r="5.2" fill="rgba(252,211,77,0.22)"/><circle cx="80.9" cy="64.6" r="2.6" fill="#FCD34D"/><use href="#bubble" fill="#FCD34D" transform="translate(79.98 52.96) scale(0.036)"/></g>
+        <g class="hero-dot" data-at="0.6366" style="transform-origin: 57.6px 46.2px"><circle cx="57.6" cy="46.2" r="5.2" fill="rgba(252,211,77,0.22)"/><circle cx="57.6" cy="46.2" r="2.6" fill="#FCD34D"/><use href="#bubble" fill="#FCD34D" transform="translate(56.68 34.56) scale(0.036)"/></g>
+      </svg>
+    </div>
   </main>
+  </div>
 </body>
 </html>

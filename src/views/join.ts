@@ -1,5 +1,5 @@
 import type { Channel } from "../buffer.ts";
-import type { Chorus } from "../choruses.ts";
+import { type Chorus, isRelay } from "../choruses.ts";
 import { type Html, html } from "../html.ts";
 import { channelProblem } from "../posts.ts";
 import { place, serviceName } from "./labels.ts";
@@ -30,7 +30,11 @@ export function joinPage(
   return html`<div class="page-head">
   <a href="/c/${chorus._id}" class="back">${chorus.title}</a>
   <h1>Pick your channel</h1>
-  <p class="muted">Your post goes out from this channel at ${chorus.localTime}, in the channel's time zone.</p>
+  <p class="muted">${
+    isRelay(chorus)
+      ? `Your post goes out from this channel in your slot of the relay, in ${place(chorus.relayTz)} time.`
+      : `Your post goes out from this channel at ${chorus.localTime}, in the channel's time zone.`
+  }</p>
 </div>
 ${error && html`<div class="errors" role="alert"><p>${error}</p></div>`}
 ${

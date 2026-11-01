@@ -1,11 +1,11 @@
 import type { Answer } from "../ai.ts";
 import type { CheckResult } from "../checks.ts";
-import { type Chorus, TONES } from "../choruses.ts";
+import { type Chorus, isRelay, TONES } from "../choruses.ts";
 import { type Html, html } from "../html.ts";
 import type { ChorusImage } from "../images.ts";
 import { MAX_ANSWER, MAX_TEXT, type Post } from "../posts.ts";
 import { imagePicker } from "./images.ts";
-import { place, serviceName, shortName, showDay } from "./labels.ts";
+import { place, serviceName, shortName, showDay, timing } from "./labels.ts";
 
 export function checkList(result: CheckResult): Html {
   return html`<p class="counter${result.length > result.limit && " over"}" data-counter>${result.length.toLocaleString("en")} / ${result.limit.toLocaleString("en")}</p>
@@ -88,8 +88,13 @@ ${checkList(result)}
 ${brief(chorus, organizer)}
 <section class="goes-out">
   <span class="small-label">Goes out</span>
-  <strong>${showDay(chorus.day)}, around ${chorus.localTime}</strong>
-  <span class="muted">${place(post.channelTz)} time, from your ${serviceName(post.channelService)} channel in Buffer. Posts in one time zone go out a few minutes apart, so they don't all land at once.</span>
+${
+  isRelay(chorus)
+    ? html`<strong>${showDay(chorus.day)}, in your slot of the relay</strong>
+  <span class="muted">A relay ${timing(chorus)}. You get the next free slot when you approve, and it goes out from your ${serviceName(post.channelService)} channel in Buffer.</span>`
+    : html`<strong>${showDay(chorus.day)}, around ${chorus.localTime}</strong>
+  <span class="muted">${place(post.channelTz)} time, from your ${serviceName(post.channelService)} channel in Buffer. Posts in one time zone go out a few minutes apart, so they don't all land at once.</span>`
+}
 </section>
 </aside>
 </div>`;

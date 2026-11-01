@@ -21,9 +21,11 @@ import {
   getChorus,
   isLive,
   isOver,
+  isRelay,
   listOwned,
   openChorusOf,
   parseChorus,
+  relaySlots,
 } from "./choruses.ts";
 import { deleteUserData, tokensGoOn } from "./cleanup.ts";
 import { page } from "./html.ts";
@@ -62,11 +64,13 @@ import {
   markFailed,
   markScheduled,
   markSent,
+  nextSlot,
   type Post,
   postsOf,
   saveAiDraft,
   saveText,
   stillScheduled,
+  takeSlot,
 } from "./posts.ts";
 import { bufferCanFetch } from "./storage.ts";
 import { waveDueAt } from "./time.ts";
@@ -79,6 +83,7 @@ import { shortName } from "./views/labels.ts";
 import { liveMap } from "./views/map.ts";
 import { myChoruses } from "./views/my-choruses.ts";
 import { cantStart, newChorusForm } from "./views/new-chorus.ts";
+import { relayFinishedPage, relayWall, relayWallPage } from "./views/relay.ts";
 import { reviewPage } from "./views/review.ts";
 import { finishedPage, scheduled, wallList, wallPage } from "./views/wall.ts";
 import { aiPage, checkList, writePage } from "./views/write.ts";
@@ -325,16 +330,18 @@ pages.get("/c/:id", async (req, res) => {
   // From the day on everyone sees the wall. The organizer can still open the dashboard.
   const dashboard = isOrganizer && req.query.dashboard !== undefined;
   if (over && !dashboard) {
+    const finished = isRelay(chorus) ? relayFinishedPage : finishedPage;
     return res.send(
-      page(chorus.title, finishedPage(view), {
+      page(chorus.title, finished(view), {
         viewer: session && viewer(session),
         script: "copy.js",
       }),
     );
   }
   const wall = live && !dashboard;
+  const livePage = isRelay(chorus) ? relayWallPage : wallPage;
   res.send(
-    page(chorus.title, wall ? wallPage(view) : chorusPage(view), {
+    page(chorus.title, wall ? livePage(view) : chorusPage(view), {
       viewer: session && viewer(session),
       script: wall ? "wall.js" : isOrganizer ? "copy.js" : undefined,
     }),
@@ -443,6 +450,9 @@ pages.get("/c/:id/wall", async (req, res) => {
     name: names.get(post.userId) ?? "?",
     post,
   }));
+  if (isRelay(chorus)) {
+    return res.type("html").send(relayWall(chorus, people).value);
+  }
   const part =
     "map" in req.query ? liveMap(scheduled(people)) : wallList(people);
   res.type("html").send(part.value);
@@ -729,6 +739,7 @@ pages.get("/c/:id/post/review", async (req, res) => {
   const post = await findPost(chorus._id, session.userId);
   if (post?.status !== "drafting") return res.redirect(`/c/${chorus._id}`);
   const result = await checksFor(chorus, post, post.text ?? "");
+  const slot = isRelay(chorus) ? await nextSlot(chorus, post) : undefined;
   res.send(
     page(
       "Check your post",
@@ -737,6 +748,7 @@ pages.get("/c/:id/post/review", async (req, res) => {
         post,
         result,
         await imagesIn({ chorusId: chorus._id }),
+        slot,
       ),
       {
         viewer: viewer(session),
@@ -755,7 +767,8 @@ pages.post(
     if (!chorus) return notFound(res, session);
     if (!session) return res.redirect(303, `/login?next=/c/${chorus._id}/post`);
     if (isOver(chorus)) return res.redirect(303, `/c/${chorus._id}`);
-    const zone = req.body?.tz;
+    // A relay goes out in the relay's time zone, so the person's own doesn't matter.
+    const zone = isRelay(chorus) ? undefined : req.body?.tz;
     if (zone !== undefined && !validZone(zone)) {
       return res.redirect(303, `/c/${chorus._id}/post/review`);
     }
@@ -771,14 +784,25 @@ pages.post(
       return res.redirect(303, `/c/${chorus._id}/post/review`);
     }
 
-    // The image as it is now. Changing images later doesn't change this post: its files stay.
+    let dueAt = waveDueAt(chorus.day, chorus.localTime, post.channelTz);
+    if (isRelay(chorus)) {
+      const slot = await takeSlot(chorus, post);
+      // The relay is full. The review page says so.
+      if (slot === null) {
+        await backToDraft(post._id);
+        return res.redirect(303, `/c/${chorus._id}/post/review`);
+      }
+      dueAt = relaySlots(chorus)[slot];
+    }
+
+    // The image as it is now. Images can't change after the start, so neither can this.
     const image = imageFor(await imagesIn({ chorusId: chorus._id }), post);
     try {
       const scheduled = await createPost(await getAccessToken(session.userId), {
         channelId: post.channelId,
         service: post.channelService,
         text: post.text ?? "",
-        dueAt: waveDueAt(chorus.day, chorus.localTime, post.channelTz),
+        dueAt,
         aiAssisted: post.aiShaped,
         saveToDraft: asDraft,
         image: image

@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { Answer } from "./ai.ts";
 import type { Channel } from "./buffer.ts";
+import { type Relay, relaySlots } from "./choruses.ts";
 import { collection } from "./db.ts";
 import { needsImage } from "./images.ts";
+import { LATE_MINUTES } from "./time.ts";
 
 // One per person in a Chorus, with one channel each. The text, the time and the Buffer post come later.
 export type Post = {
@@ -41,12 +43,18 @@ export type Post = {
   // who joined before, so the images spread across the group. null is "No image".
   imageIndex?: number | null;
   joinedAt: Date;
+  relaySlot?: number; // a relay's place in line, from 0, taken when the person approves
 };
 
 export function posts() {
   return collection<Post>("posts", [
     { key: { chorusId: 1, userId: 1 }, unique: true },
     { key: { userId: 1 } },
+    {
+      key: { chorusId: 1, relaySlot: 1 },
+      unique: true,
+      partialFilterExpression: { relaySlot: { $exists: true } },
+    },
   ]);
 }
 
@@ -397,4 +405,52 @@ export async function stillScheduled(
     { _id: id },
     { $set: { status }, $unset: { lockedAt: "" } },
   );
+}
+
+// The relay slots other people in the Chorus hold.
+async function slotsTaken(chorusId: string, userId: string) {
+  const holders = await (await posts())
+    .find({ chorusId, userId: { $ne: userId }, relaySlot: { $exists: true } })
+    .project<{ relaySlot: number }>({ relaySlot: 1 })
+    .toArray();
+  return new Set(holders.map((holder) => holder.relaySlot));
+}
+
+// The person's own slot if they have one and it's still ahead, otherwise the first free slot that is.
+// A slot needs a few minutes left, so Buffer gets the post in time. Null: no slot is left.
+function pickSlot(times: Date[], taken: Set<number>, own?: number) {
+  const ahead = (slot: number) =>
+    times[slot].getTime() > Date.now() + LATE_MINUTES * 60_000;
+  if (own !== undefined && own < times.length && ahead(own)) return own;
+  const free = times.findIndex((_, slot) => !taken.has(slot) && ahead(slot));
+  return free === -1 ? null : free;
+}
+
+// The slot the person would get if they approved now, for the review page.
+export async function nextSlot(chorus: Relay, post: Post) {
+  const taken = await slotsTaken(chorus._id, post.userId);
+  return pickSlot(relaySlots(chorus), taken, post.relaySlot);
+}
+
+// Two people approving at the same moment can pick the same free slot. The unique index on
+// { chorusId, relaySlot } lets only one of them save it; the other gets a duplicate key error and tries
+// the next free one. A post keeps its slot when it's withdrawn or Buffer refuses it, so fixing a typo
+// doesn't send the person to the end of the line. Nobody else can take it meanwhile.
+export async function takeSlot(chorus: Relay, post: Post) {
+  const times = relaySlots(chorus);
+  const taken = await slotsTaken(chorus._id, post.userId);
+  for (;;) {
+    const slot = pickSlot(times, taken, post.relaySlot);
+    if (slot === null || slot === post.relaySlot) return slot;
+    try {
+      await (await posts()).updateOne(
+        { _id: post._id },
+        { $set: { relaySlot: slot } },
+      );
+      return slot;
+    } catch (err) {
+      if ((err as { code?: number }).code !== 11000) throw err;
+      taken.add(slot);
+    }
+  }
 }

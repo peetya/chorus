@@ -32,7 +32,8 @@ npm run lint
 No Buffer account? Set `BUFFER_MOCK=1` in `.env` and skip step 1 (the app client values can stay empty).
 Sign-in then shows a list of fake people in different time zones, and nothing reaches Buffer.
 `npm run mock-data` fills the local database with a Chorus for each state of the wall (coming up, live at
-the start, halfway and near the end, finished), timed around the moment you run it. Run it again to reset:
+the start, halfway and near the end, finished), and a live, a full and a finished relay, timed around the
+moment you run it. Run it again to reset:
 it first removes everything the fake people made.
 
 ## Map data

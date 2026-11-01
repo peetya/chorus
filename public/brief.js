@@ -101,3 +101,33 @@ form.addEventListener("input", updateCard);
 form.addEventListener("input", updateTimeHint);
 form.querySelectorAll("[data-list]").forEach(renumber);
 updateCard();
+
+// A relay's slots: the first post, then one every gap, the last one before 18:00. Same sums as relayTimes
+// in src/time.ts.
+function updateSlotHint() {
+  const [hour, minute] = form.elements.localTime.value.split(":").map(Number);
+  const gap = Number(form.elements.relayGapMin.value);
+  const times = [];
+  for (let at = hour * 60 + minute; at < 18 * 60; at += gap) {
+    times.push(
+      `${String(Math.floor(at / 60)).padStart(2, "0")}:${String(at % 60).padStart(2, "0")}`,
+    );
+  }
+  const hint = document.querySelector("[data-slot-hint]");
+  if (Number.isNaN(hour) || times.length === 0) {
+    hint.textContent = "no one yet: pick an earlier first post";
+  } else if (times.length === 1) {
+    hint.textContent = `1 person, at ${times[0]}`;
+  } else {
+    hint.textContent = `${times.length} people: ${times[0]} to ${times.at(-1)}`;
+  }
+}
+
+// A new relay starts in the organizer's own time zone, when the list has it.
+const zone = document.querySelector("[data-tz-guess]");
+const guess = Intl.DateTimeFormat().resolvedOptions().timeZone;
+if (zone && [...zone.options].some((option) => option.value === guess)) {
+  zone.value = guess;
+}
+
+form.addEventListener("input", updateSlotHint);

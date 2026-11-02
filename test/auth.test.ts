@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { test } from "node:test";
-import { authorizeUrl, createPkce } from "../src/buffer.ts";
+import { type TestContext, test } from "node:test";
+import { authorizeUrl, createPkce, exchangeCode } from "../src/buffer.ts";
 import { seal, unseal } from "../src/crypto.ts";
 import { cookieFrom, listen } from "./server.ts";
 
@@ -40,6 +40,63 @@ test("the authorize URL asks for a refresh token with S256 PKCE", () => {
   assert.ok(
     url.searchParams.get("scope")?.split(" ").includes("offline_access"),
   );
+});
+
+// Buffer's token endpoint, answering with this body and status.
+function tokenAnswer(t: TestContext, body: unknown, status = 200) {
+  const sent: URLSearchParams[] = [];
+  t.mock.method(
+    globalThis,
+    "fetch",
+    async (_url: string, init: RequestInit) => {
+      sent.push(new URLSearchParams(String(init.body)));
+      return new Response(JSON.stringify(body), { status });
+    },
+  );
+  return sent;
+}
+
+test("the code is exchanged with the verifier and the secret in the body", async (t) => {
+  const sent = tokenAnswer(t, {
+    access_token: "access",
+    refresh_token: "refresh",
+    expires_in: 3600,
+  });
+  const tokens = await exchangeCode("the-code", "the-verifier");
+  assert.equal(tokens.accessToken, "access");
+  assert.equal(tokens.refreshToken, "refresh");
+  assert.ok(tokens.expiresAt < Date.now() + 3600_000);
+  assert.equal(sent[0].get("code_verifier"), "the-verifier");
+  assert.equal(sent[0].get("client_secret"), "test-secret");
+});
+
+test("a refused code says what to check", async (t) => {
+  tokenAnswer(t, { error: "invalid_grant", error_description: "Expired" }, 400);
+  await assert.rejects(exchangeCode("old", "v"), {
+    name: "Error",
+    code: "invalid_grant",
+    message: /Expired \(the code was used or expired/,
+  });
+});
+
+test("tokens without a refresh token are refused", async (t) => {
+  tokenAnswer(t, { access_token: "access" });
+  await assert.rejects(exchangeCode("code", "v"), /no refresh token/);
+});
+
+test("an expired session cookie is no session", async (t) => {
+  const base = await listen(t);
+  const value = { userId: "u1", name: "Lena" };
+  const home = async (exp: number) => {
+    const sealed = seal({ value, exp }, process.env.SESSION_SECRET ?? "");
+    const res = await fetch(`${base}/`, {
+      headers: { cookie: `chorus_session=${sealed}` },
+    });
+    return res.text();
+  };
+
+  assert.match(await home(Date.now() + 60_000), /Menu for Lena/);
+  assert.doesNotMatch(await home(Date.now() - 1000), /Menu for Lena/);
 });
 
 test("the sign-in page lists Buffer and keeps where to go next", async (t) => {

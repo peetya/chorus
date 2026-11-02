@@ -28,7 +28,7 @@ async function owned(title: string) {
   return (await choruses()).countDocuments({ title });
 }
 
-test("each person runs one Chorus at a time, until the day after it", async (t) => {
+test("each person runs one Chorus at a time, until it's over", async (t) => {
   const base = await listen(t);
   const zsofia = await mockSession(base, "mock_zsofia");
   const first = await start(base, zsofia, "First");
@@ -56,6 +56,20 @@ test("each person runs one Chorus at a time, until the day after it", async (t) 
   await (await choruses()).updateOne(filter, { $set: { day: addDays(-2) } });
   assert.equal((await start(base, zsofia, "Second")).status, 303);
   assert.equal(await owned("Second"), 1);
+
+  // A relay is over when its day is over in its own time zone, the same as everywhere else.
+  await (await choruses()).updateOne(
+    { title: "Second" },
+    {
+      $set: {
+        kind: "relay",
+        relayTz: "Pacific/Kiritimati",
+        relayGapMin: 20,
+        day: addDays(-1),
+      },
+    },
+  );
+  assert.equal((await start(base, zsofia, "Third")).status, 303);
 });
 
 test("CHORUS_CREATE=off pauses new Choruses, and joining still works", async (t) => {

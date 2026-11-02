@@ -95,9 +95,9 @@ function mockDraft(chorus: Chorus, answers: Answer[]): AiResult {
 
 let client: OpenAI | undefined;
 
-// AI_DEBUG=1 prints the whole exchange. Only for testing: the answers are people's own words.
+// AI_DEBUG=1 prints the whole exchange. Only on your own machine: the answers are people's own words.
 function debug(label: string, value: unknown) {
-  if (process.env.AI_DEBUG !== "1") return;
+  if (process.env.AI_DEBUG !== "1" || process.env.VERCEL) return;
   const shown =
     typeof value === "string" ? value : JSON.stringify(value, null, 2);
   console.log(`[ai] ${label}:\n${shown}\n`);

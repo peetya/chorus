@@ -73,7 +73,8 @@ ${drafted && html`<p class="notice" role="status">Here's a draft from your answe
       <label for="text">Your post <span class="optional">· in your own words</span></label>
       ${ai && (ai.usesLeft > 0 ? html`<a href="/c/${chorus._id}/post/ai" class="button">Draft with AI</a>` : html`<span class="small muted">No AI drafts left</span>`)}
     </div>
-    <textarea id="text" name="text" rows="12" maxlength="${MAX_TEXT}">${text}</textarea>
+    <textarea id="text" name="text" rows="12" maxlength="${MAX_TEXT}">
+${text}</textarea>
     <div data-results aria-live="polite">
 ${checkList(result)}
     </div>
@@ -124,7 +125,8 @@ ${error && html`<div class="errors" role="alert"><p>${error}</p></div>`}
   ${chorus.questions.map(
     (question, i) => html`<div class="field">
     <label for="answer-${i}">${question}</label>
-    <textarea id="answer-${i}" name="answer" rows="3" maxlength="${MAX_ANSWER}">${said(question)}</textarea>
+    <textarea id="answer-${i}" name="answer" rows="3" maxlength="${MAX_ANSWER}">
+${said(question)}</textarea>
   </div>`,
   )}
   ${
@@ -132,7 +134,8 @@ ${error && html`<div class="errors" role="alert"><p>${error}</p></div>`}
     html`<div class="field">
     <label for="follow-up">${followUp}</label>
     <input type="hidden" name="followUp" value="${followUp}">
-    <textarea id="follow-up" name="followUpAnswer" rows="3" maxlength="${MAX_ANSWER}" autofocus>${said(followUp)}</textarea>
+    <textarea id="follow-up" name="followUpAnswer" rows="3" maxlength="${MAX_ANSWER}" autofocus>
+${said(followUp)}</textarea>
     <span class="hint">The AI asked this, so the post can be really yours.</span>
   </div>`
   }

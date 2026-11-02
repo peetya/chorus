@@ -113,7 +113,8 @@ ${errorBox}
 
 <div class="field">
 <label for="note">A note to everyone <span class="optional">(optional)</span></label>
-<textarea id="note" name="note" rows="3" maxlength="1000">${input.note}</textarea>
+<textarea id="note" name="note" rows="3" maxlength="1000">
+${input.note}</textarea>
 <span class="hint">What this is and why it matters to you. Shown on the invite. It is not used as facts in the posts.</span>
 </div>
 
@@ -207,7 +208,7 @@ export function cantStart(open: Chorus | null): Html {
 <section class="box narrow-box">
 ${
   open
-    ? html`<p>You already have a Chorus coming up: <strong>${open.title}</strong>, on ${showDay(open.day)}. You can start a new one the day after it's over.</p>
+    ? html`<p>You already have a Chorus coming up: <strong>${open.title}</strong>, on ${showDay(open.day)}. You can start a new one when it's over.</p>
 <p class="muted">Buffer's API has a daily limit for the whole app, so each person runs one Chorus at a time.</p>
 <a href="/c/${open._id}" class="button primary">Open your Chorus</a>`
     : html`<p>Starting a new Chorus is paused for now, so the Chorus that's running gets all of Buffer's daily API limit. Joining a Chorus works as usual.</p>

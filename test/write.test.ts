@@ -49,7 +49,8 @@ test("the editor starts with the main hashtag and shows the brief", async (t) =>
   const html = await (
     await fetch(`${base}${path}/post`, { headers: { cookie } })
   ).text();
-  assert.match(html, /<textarea[^>]*>\n\n#TallyLaunch<\/textarea>/);
+  // The browser drops one newline right after <textarea>, so the page sends three for the two blank lines.
+  assert.match(html, /<textarea[^>]*>\n\n\n#TallyLaunch<\/textarea>/);
   assert.match(html, /Zsófia K\. suggests: <strong>casual<\/strong>/);
   assert.match(html, /\/ 280/); // X's limit, from the channel
 });

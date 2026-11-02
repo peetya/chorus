@@ -172,6 +172,64 @@ test("withdrawing takes it out of Buffer and keeps the text, but not at the last
   assert.equal((await postOf(path, "ch_dana_li"))?.status, "scheduled");
 });
 
+test("a request that died while scheduling holds the post only for two minutes", async (t) => {
+  const base = await listen(t);
+  const { path, cookie } = await drafted(
+    base,
+    "mock_ravi",
+    "ch_ravi_x",
+    "Out today. #TallyLaunch",
+  );
+  const filter = { chorusId: path.slice(3), channelId: "ch_ravi_x" };
+  await (await posts()).updateOne(filter, {
+    $set: { status: "scheduling", lockedAt: new Date() },
+  });
+  await post(base, `${path}/post/approve`, cookie);
+  assert.equal((await postOf(path, "ch_ravi_x"))?.status, "scheduling");
+
+  await (await posts()).updateOne(filter, {
+    $set: { lockedAt: new Date(Date.now() - 3 * 60_000) },
+  });
+  await post(base, `${path}/post/approve`, cookie);
+  assert.equal((await postOf(path, "ch_ravi_x"))?.status, "scheduled");
+});
+
+test("a withdraw that died can be tried again after two minutes, but not at the last minute", async (t) => {
+  const base = await listen(t);
+  const { path, cookie } = await drafted(
+    base,
+    "mock_dana",
+    "ch_dana_li",
+    "Out today. #TallyLaunch",
+  );
+  await post(base, `${path}/post/approve`, cookie);
+  const filter = { chorusId: path.slice(3), channelId: "ch_dana_li" };
+  const died = {
+    status: "withdrawing" as const,
+    withdrawFrom: "scheduled" as const,
+    lockedAt: new Date(),
+  };
+  await (await posts()).updateOne(filter, { $set: died });
+  await post(base, `${path}/post/withdraw`, cookie);
+  assert.equal((await postOf(path, "ch_dana_li"))?.status, "withdrawing");
+
+  const stale = new Date(Date.now() - 3 * 60_000);
+  await (await posts()).updateOne(filter, {
+    $set: { lockedAt: stale, dueAt: new Date(Date.now() + 2 * 60_000) },
+  });
+  await post(base, `${path}/post/withdraw`, cookie);
+  assert.equal((await postOf(path, "ch_dana_li"))?.status, "withdrawing");
+
+  await (await posts()).updateOne(filter, {
+    $set: { dueAt: new Date(Date.now() + 60 * 60_000) },
+  });
+  const res = await post(base, `${path}/post/withdraw`, cookie);
+  assert.equal(res.headers.get("location"), `${path}/post`);
+  const draft = await postOf(path, "ch_dana_li");
+  assert.equal(draft?.status, "drafting");
+  assert.equal(draft?.withdrawFrom, undefined);
+});
+
 test("a scheduled post can't be edited or moved to another channel", async (t) => {
   const base = await listen(t);
   const { path, cookie } = await drafted(

@@ -173,7 +173,8 @@ ${
   html`<section class="reminder">
   <h2 class="sub-title">${waiting.length === 1 ? "1 person isn't ready yet" : `${waiting.length} people aren't ready yet`}</h2>
   <p class="muted">Send a nudge to ${new Intl.ListFormat("en").format(waiting)}, where your team already talks.</p>
-  <textarea id="reminder" class="reminder-text" readonly rows="4">${reminder}</textarea>
+  <textarea id="reminder" class="reminder-text" readonly rows="4" aria-label="Reminder">
+${reminder}</textarea>
   <button type="button" class="button" data-copy="reminder">Copy the reminder</button>
 </section>`
 }`;

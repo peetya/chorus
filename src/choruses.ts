@@ -123,7 +123,7 @@ export function isLive(chorus: Chorus): boolean {
 
 function isLink(link: string): boolean {
   try {
-    return ["https:", "http:"].includes(new URL(link).protocol);
+    return new URL(link).protocol === "https:";
   } catch {
     return false;
   }
@@ -233,9 +233,13 @@ export function canCreate(): boolean {
   return process.env.CHORUS_CREATE !== "off";
 }
 
-// Not over yet: see isOver. Two Choruses started in the same second can both get through; rare enough.
+// Not over yet. The query finds every Chorus that might still be open, isOver decides. Two Choruses
+// started in the same second can both get through; rare enough.
 export async function openChorusOf(ownerId: string): Promise<Chorus | null> {
-  return (await choruses()).findOne({ ownerId, day: { $gte: addDays(-1) } });
+  const recent = await (await choruses())
+    .find({ ownerId, day: { $gte: addDays(-1) } })
+    .toArray();
+  return recent.find((chorus) => !isOver(chorus)) ?? null;
 }
 
 export async function listOwned(ownerId: string): Promise<Chorus[]> {

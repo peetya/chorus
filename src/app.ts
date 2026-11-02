@@ -7,10 +7,39 @@ import { pages } from "./pages.ts";
 import { NotConnectedError } from "./users.ts";
 
 const app = express();
+app.disable("x-powered-by");
 
-// Auth and account pages must never be stored by a shared cache.
+// Every script is a file in public/, so the pages can refuse any other. The inline styles are the
+// landing map's positions. Files in public/ come from Vercel's CDN without these headers.
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src https://fonts.gstatic.com",
+  "img-src 'self' https://*.public.blob.vercel-storage.com",
+  "base-uri 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+// Auth and account pages must never be stored by a shared cache, so no page is.
 app.use((_req, res, next) => {
-  res.set("Cache-Control", "no-store, private");
+  res.set({
+    "Cache-Control": "no-store, private",
+    "Content-Security-Policy": CSP,
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+  });
+  next();
+});
+
+// SameSite=Lax cookies already keep other sites' forms out. A second lock: a form posted from another
+// site is refused. Requests without an Origin, like the tests' own, aren't from a browser form.
+app.use((req, res, next) => {
+  const origin = req.get("origin");
+  const host = req.get("x-forwarded-host") ?? req.get("host");
+  if (req.method === "POST" && origin && URL.parse(origin)?.host !== host) {
+    return res.sendStatus(403);
+  }
   next();
 });
 
@@ -38,8 +67,10 @@ app.get("/api/cleanup", async (req, res) => {
 app.use(auth);
 app.use(pages);
 
-// Log only the message. Our error messages never include tokens or drafts.
-const onError: ErrorRequestHandler = (err, _req, res, _next) => {
+// Log the message and the stack, never the request. Our error messages never include tokens or drafts.
+const onError: ErrorRequestHandler = (err, _req, res, next) => {
+  // The response already started, so Express can only close it.
+  if (res.headersSent) return next(err);
   if (err instanceof NotConnectedError) {
     return res.status(401).send(
       page(
@@ -58,7 +89,11 @@ const onError: ErrorRequestHandler = (err, _req, res, _next) => {
       .send("That image is over 4 MB. Try a smaller one.");
   }
   console.error(
-    JSON.stringify({ event: "request_failed", message: String(err?.message) }),
+    JSON.stringify({
+      event: "request_failed",
+      message: String(err?.message),
+      stack: err?.stack,
+    }),
   );
   res.status(500).send(
     page(

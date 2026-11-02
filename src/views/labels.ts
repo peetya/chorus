@@ -1,5 +1,3 @@
-import { type Chorus, isRelay } from "../choruses.ts";
-
 // Chorus pages are shareable, so other people show as first name and initial: "Péter H.".
 export function shortName(name: string): string {
   const [first, ...rest] = name.trim().split(/\s+/);
@@ -60,11 +58,4 @@ const ORDINALS: Record<string, string> = {
 export function ordinal(n: number): string {
   const rule = new Intl.PluralRules("en", { type: "ordinal" }).select(n);
   return `${n}${ORDINALS[rule] ?? "th"}`;
-}
-
-// "09:00 in each person's time zone", or for a relay "from 09:00 Budapest time, a new voice every 45 min".
-export function timing(chorus: Chorus): string {
-  if (!isRelay(chorus)) return `${chorus.localTime} in each person's time zone`;
-  const gap = chorus.relayGapMin === 60 ? "hour" : `${chorus.relayGapMin} min`;
-  return `from ${chorus.localTime} ${place(chorus.relayTz)} time, a new voice every ${gap}`;
 }

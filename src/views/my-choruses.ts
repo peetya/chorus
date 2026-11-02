@@ -8,10 +8,10 @@ import {
 } from "../choruses.ts";
 import { type Html, html } from "../html.ts";
 import type { Post } from "../posts.ts";
-import { localTime } from "../time.ts";
-import { place, shortName, showDay, timing } from "./labels.ts";
+import { place, shortName, showDay } from "./labels.ts";
 import { liveMap, until as timeLeft } from "./map.ts";
 import { relaySun } from "./relay.ts";
+import { clockAt, timing } from "./when.ts";
 
 // Empty for yesterday: a wave still runs in the last time zones then, so it isn't done yet.
 export function until(day: string): string {
@@ -39,7 +39,7 @@ function status(chorus: Chorus, people: NonNullable<MyChorus["people"]>): Html {
   const next = people.find(
     ({ post }) => post.status !== "sent" && post.dueAt > now,
   );
-  return html`<span><strong class="live-count">${sent} of ${people.length} posted</strong>${next && html`<span class="muted"> · next: ${shortName(next.name)} ${isRelay(chorus) ? `at ${localTime(next.post.dueAt, chorus.relayTz)}` : `in ${place(next.post.channelTz)}`}, in ${timeLeft(next.post.dueAt, now)}</span>`}</span>`;
+  return html`<span><strong class="live-count">${sent} of ${people.length} posted</strong>${next && html`<span class="muted"> · next: ${shortName(next.name)} ${isRelay(chorus) ? html`at ${clockAt(next.post.dueAt, chorus.relayTz, `${place(chorus.relayTz)} time`)}` : `in ${place(next.post.channelTz)}`}, in ${timeLeft(next.post.dueAt, now)}</span>`}</span>`;
 }
 
 function card({ chorus, organizer, people }: MyChorus, done: boolean): Html {
@@ -53,7 +53,7 @@ function card({ chorus, organizer, people }: MyChorus, done: boolean): Html {
     : "You organize";
   const text = html`<span class="pill">${when}</span>
   <span class="chorus-title">${chorus.title}</span>
-  <span class="muted">${role} · ${isRelay(chorus) ? `Relay ${timing(chorus)}` : html`at <span class="mono">${chorus.localTime}</span> in each person's time zone`}</span>`;
+  <span class="muted">${role} · ${isRelay(chorus) ? html`Relay ${timing(chorus)}` : html`at <span class="mono">${chorus.localTime}</span> in each person's time zone`}</span>`;
   if (people) {
     return html`<a href="/c/${chorus._id}" class="chorus-card live">
   <span class="live-text">

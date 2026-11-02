@@ -87,7 +87,10 @@ test("the organizer sees who is ready, and nobody's text", async (t) => {
   assert.match(html, /<strong>1<\/strong> needs a look/);
   assert.match(html, /Dana R\.<\/td>/);
   assert.match(html, /New York <span[^>]*>UTC-5<\/span>/);
-  assert.match(html, /<span class="mono">09:(0\d|1[0-2])<\/span>/);
+  assert.match(
+    html,
+    /<span class="mono"><time datetime="[^"]+" data-zone="[^"]+">09:(0\d|1[0-2])<\/time><\/span>/,
+  );
   assert.match(html, /Buffer refused it: Channel not found/);
   assert.match(html, /class="status drafting">Not started/);
   assert.match(html, /3 people aren&#39;t ready yet/);

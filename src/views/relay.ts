@@ -12,9 +12,9 @@ import {
   serviceName,
   shortName,
   showDay,
-  timing,
 } from "./labels.ts";
 import { count, type Entry, realLink, scheduled, state } from "./wall.ts";
+import { clockAt, timing } from "./when.ts";
 
 const MONO = "JetBrains Mono, ui-monospace, Menlo, monospace";
 const SANS = "Instrument Sans, ui-sans-serif, system-ui, sans-serif";
@@ -217,7 +217,7 @@ function row(
   return html`<li class="wall-post ${post.status}${isNext && " next"}">
   <span class="avatar">${initials(name)}</span>
   <span class="wall-who"><strong>${shortName(name)}</strong> <span class="muted">${serviceName(post.channelService)}${post.relaySlot !== undefined && ` · ${ordinal(post.relaySlot + 1)}`}</span></span>
-  <span class="mono">${localTime(post.dueAt, chorus.relayTz)}</span>
+  <span class="mono">${clockAt(post.dueAt, chorus.relayTz)}</span>
   <span class="wall-state">${isNext ? `Next, in ${inTime(post.dueAt, now)}` : state(post)}</span>
 </li>`;
 }
@@ -226,7 +226,7 @@ function row(
 export function relaySunPanel(chorus: Relay, joined: Joined[]): Html {
   return html`<section class="sun-panel">
   <div class="sun-head">
-    <h2 class="sun-title">The sun over ${place(chorus.relayTz)} today</h2>
+    <h2 class="sun-title">The sun over ${place(chorus.relayTz)} today <span class="sun-now">· now ${clockAt(new Date(), chorus.relayTz, "there")}</span></h2>
     <span class="sun-legend" aria-hidden="true"><span class="key posted"></span>Posted <span class="key next"></span>Next <span class="key waiting"></span>Waiting for their turn</span>
   </div>
   ${sunPath(chorus, scheduled(joined), Date.now())}
@@ -248,7 +248,7 @@ export function relayWall(chorus: Relay, joined: Joined[]): Html {
   <h2 class="zone-title">${title}</h2>
   <ul>${items.map((entry) => row(entry, chorus, next, now))}</ul>
 </section>`;
-  return html`<p class="wall-count"><strong>${out} of ${entries.length}</strong> ${entries.length === 1 ? "post is" : "posts are"} out${next && html` <span class="muted">· next: ${shortName(next.name)} at ${localTime(next.post.dueAt, chorus.relayTz)}, in ${inTime(next.post.dueAt, now)}</span>`}${writing > 0 && html` <span class="muted">· ${writing === 1 ? "1 person is" : `${writing} people are`} still writing</span>`}</p>
+  return html`<p class="wall-count"><strong>${out} of ${entries.length}</strong> ${entries.length === 1 ? "post is" : "posts are"} out${next && html` <span class="muted">· next: ${shortName(next.name)} at ${clockAt(next.post.dueAt, chorus.relayTz, `${place(chorus.relayTz)} time`)}, in ${inTime(next.post.dueAt, now)}</span>`}${writing > 0 && html` <span class="muted">· ${writing === 1 ? "1 person is" : `${writing} people are`} still writing</span>`}</p>
 ${
   entries.length === 0
     ? html`<p class="empty">No posts are scheduled yet.</p>`

@@ -131,7 +131,10 @@ test("people approving at the same moment get different slots, in the relay's ti
     await drafted(base, path, "mock_dana", "ch_dana_li"),
   ];
   const review = await page(base, `${path}/post/review`, people[0]);
-  assert.match(review, /goes out at <strong>09:00 Reykjavik time<\/strong>/);
+  assert.match(
+    review,
+    /goes out at <strong><time datetime="[^"]+" data-zone="Atlantic\/Reykjavik">09:00 Reykjavik time<\/time><\/strong>/,
+  );
   assert.match(review, /1st in line/);
   assert.doesNotMatch(review, /Your time zone/);
 
@@ -149,7 +152,7 @@ test("people approving at the same moment get different slots, in the relay's ti
     assert.equal(one.dueAt?.toISOString(), `${addDays(1)}T${hour}:00:00.000Z`);
   }
   const own = await page(base, path, people[0]);
-  assert.match(own, /Reykjavik time, \d(st|nd|rd) in line/);
+  assert.match(own, /Reykjavik time<\/time><\/strong>, \d(st|nd|rd) in line/);
 });
 
 test("a full relay says so and leaves the post a draft", async (t) => {
@@ -294,10 +297,10 @@ test("the dashboard and My Choruses show the relay's timing", async (t) => {
   const dashboard = await page(base, path, owner);
   assert.match(
     dashboard,
-    /from 09:00 Reykjavik time, a new voice every 45 min · 0 of 12 slots taken/,
+    /from <time datetime="[^"]+" data-zone="Atlantic\/Reykjavik">09:00 Reykjavik time<\/time>, a new voice every 45 min · 0 of 12 slots taken/,
   );
   const mine = await page(base, "/me", owner);
-  assert.match(mine, /Relay from 09:00 Reykjavik time/);
+  assert.match(mine, /Relay from <time[^>]*>09:00 Reykjavik time<\/time>/);
 });
 
 test("the form offers a wave or a relay, and keeps the relay's fields after an error", async (t) => {

@@ -87,7 +87,10 @@ test("a live relay's card shows the sun's path, and who's next at their time", (
   ]).value;
   assert.match(page, /class="chorus-card live"/);
   assert.match(page, /1 of 2 posted/);
-  assert.match(page, /next: Dana R\. at \d\d:\d\d, in (19|20) min/);
+  assert.match(
+    page,
+    /next: Dana R\. at <time datetime="[^"]+" data-zone="Europe\/Budapest">\d\d:\d\d Budapest time<\/time>, in (19|20) min/,
+  );
   assert.match(page, /class="sun-frame"/);
   // Dots only: faces would need their initials, and the card hides the drawing's text.
   assert.doesNotMatch(page, /r="6\.4"/);

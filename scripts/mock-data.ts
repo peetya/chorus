@@ -3,7 +3,8 @@
 // everything of the mock people, also the Choruses made by hand while signed in as one of them.
 //
 // The live ones are built around the current time, so the wall is in the middle of its day whenever
-// the script runs. Their time is not 09:00, but whatever puts "now" where it should be.
+// the script runs. Their time is not 09:00, but whatever puts "now" where it should be. Each Chorus is a
+// made-up team with its own news, so the pages look like they will with real people.
 import { isMock } from "../src/buffer.ts";
 import {
   type Chorus,
@@ -37,13 +38,14 @@ function dayIn(at: number, timeZone: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone }).format(at);
 }
 
-// The Chorus time that makes this person's post go out about `minutes` from now.
-function aroundNow(timeZone: string, minutes: number) {
+// The Chorus time that makes this person's post go out about `minutes` from now, rounded down to `step`
+// minutes.
+function aroundNow(timeZone: string, minutes: number, step = 5) {
   const at = now + minutes * MINUTE;
   const [hour, minute] = localTime(new Date(at), timeZone)
     .split(":")
     .map(Number);
-  const rounded = `${String(hour).padStart(2, "0")}:${String(minute - (minute % 5)).padStart(2, "0")}`;
+  const rounded = `${String(hour).padStart(2, "0")}:${String(minute - (minute % step)).padStart(2, "0")}`;
   return { day: dayIn(at, timeZone), localTime: rounded };
 }
 
@@ -81,9 +83,19 @@ const removed = (
 await (await choruses()).deleteMany({ ownerId: { $in: mockUsers } });
 await deleteImages({ ownerId: { $in: mockUsers } });
 
-type Plan = {
-  id: string;
+// What a Chorus is about. post() is what each person wrote, from their first name.
+type Story = {
   title: string;
+  facts: string[];
+  link: string;
+  hashtag: string;
+  question: string;
+  post: (first: string) => string;
+};
+
+type Plan = Story & {
+  id: string;
+  state: string; // for the list at the end
   owner: string;
   day: string;
   localTime: string;
@@ -111,7 +123,18 @@ const yesterday = dayIn(now - 86_400_000, "UTC");
 const plans: Plan[] = [
   {
     id: "map-soon",
-    title: "Coming up: our new office in Lisbon",
+    state: "Coming up, with one person still writing",
+    title: "Northwind opens its Lisbon office",
+    facts: [
+      "The Lisbon office opens on Monday",
+      "It's next to the river, in Cais do Sodré",
+      "There's room for 40 people",
+    ],
+    link: "https://northwind.example/lisbon",
+    hashtag: "#NorthwindLisbon",
+    question: "What are you looking forward to in the new office?",
+    post: (first) =>
+      `Our Lisbon office opens on Monday, right next to the river. ${first} here: I've worked from my kitchen for two years, so I'm counting the days. #NorthwindLisbon`,
     owner: "mock_sam",
     day: plusDays(dayIn(now, "UTC"), 4),
     localTime: "09:00",
@@ -119,7 +142,18 @@ const plans: Plan[] = [
   },
   {
     id: "map-start",
-    title: "Live, nobody posted yet",
+    state: "Live, nobody posted yet",
+    title: "Brightline 1.0 is out",
+    facts: [
+      "Brightline 1.0 is out today",
+      "It's open source, under the MIT license",
+      "120 people sent a pull request on the way to 1.0",
+    ],
+    link: "https://brightline.example/1-0",
+    hashtag: "#Brightline1",
+    question: "What was your first pull request to Brightline?",
+    post: (first) =>
+      `Brightline 1.0 is out. My first pull request fixed a typo in the README, and here we are. 120 people got it to 1.0, ${first} is proud to be one of them. #Brightline1`,
     owner: "mock_aiko",
     ...aroundNow("Australia/Sydney", 40),
     people: [
@@ -135,9 +169,20 @@ const plans: Plan[] = [
   },
   {
     id: "map-half",
-    title: "Live, halfway round the world",
+    state: "Live, halfway round the world",
+    title: "Tidepool 2.0 is out",
+    facts: [
+      "Tidepool 2.0 is out today",
+      "Notes now sync offline, on every device",
+      "It's free for teams of up to 10 people",
+    ],
+    link: "https://tidepool.example/2-0",
+    hashtag: "#Tidepool2",
+    question: "What did you build or fix for 2.0?",
+    post: (first) =>
+      `Tidepool 2.0 is out today. I spent the summer on offline sync, so your notes now work on a plane too. Free for teams of up to 10. ${first}, very tired and very happy. #Tidepool2`,
     owner: "mock_ravi",
-    ...aroundNow("Europe/Budapest", -10),
+    ...aroundNow("Europe/Budapest", -10, 60),
     people: [
       ["mock_chloe"],
       ["mock_aiko"],
@@ -151,7 +196,18 @@ const plans: Plan[] = [
   },
   {
     id: "map-end",
-    title: "Live, one post to go",
+    state: "Live, one post to go",
+    title: "Kettle is hiring 5 engineers",
+    facts: [
+      "Kettle is hiring 5 engineers",
+      "The jobs are remote, from anywhere in Europe or the Americas",
+      "Applications are open until December 1",
+    ],
+    link: "https://kettle.example/jobs",
+    hashtag: "#KettleHiring",
+    question: "Why would you tell a friend to work here?",
+    post: (first) =>
+      `We're hiring 5 engineers at Kettle, fully remote. ${first} here: the best part is a team that writes things down, so nobody needs to be online at 3 am. Open until December 1. #KettleHiring`,
     owner: "mock_dana",
     ...aroundNow("America/Los_Angeles", 30),
     people: [
@@ -167,7 +223,18 @@ const plans: Plan[] = [
   },
   {
     id: "map-done",
-    title: "Done, everyone posted",
+    state: "Done, everyone posted",
+    title: "The Harbor Conf 2026 speakers are in",
+    facts: [
+      "Harbor Conf is on March 12 and 13, 2027",
+      "There are 24 talks, all in English",
+      "Tickets go on sale on December 1",
+    ],
+    link: "https://harborconf.example/speakers",
+    hashtag: "#HarborConf",
+    question: "What's your talk about, in one sentence?",
+    post: (first) =>
+      `I'm speaking at Harbor Conf in March! ${first}'s talk is about the bug that took me a week to find, and the one line that fixed it. Tickets from December 1. #HarborConf`,
     owner: "mock_zsofia",
     day: plusDays(yesterday, -2),
     localTime: "09:00",
@@ -184,7 +251,18 @@ const plans: Plan[] = [
   },
   {
     id: "map-missed",
-    title: "Done, some posts didn't go out",
+    state: "Done, some posts didn't go out",
+    title: "Paperclip turns 5",
+    facts: [
+      "Paperclip is 5 years old today",
+      "It started as a weekend project",
+      "Over 2,000 teams use it every day",
+    ],
+    link: "https://paperclip.example/five",
+    hashtag: "#Paperclip5",
+    question: "What do you remember from your first week?",
+    post: (first) =>
+      `Paperclip is 5 today. It started as a weekend project, and now 2,000 teams use it every day. ${first} still remembers the first customer email. #Paperclip5`,
     owner: "mock_mark",
     day: plusDays(yesterday, -3),
     localTime: "09:00",
@@ -200,9 +278,20 @@ const plans: Plan[] = [
   },
   {
     id: "relay-live",
-    title: "Relay, live: one voice every 30 minutes",
+    state: "Relay, live: one voice every 30 minutes",
+    title: "Pocket Orbit launch day",
+    facts: [
+      "Pocket Orbit is out today on Switch and Steam",
+      "It costs 12 euros",
+      "A team of 7 made it in 2 years",
+    ],
+    link: "https://littlerobot.example/pocket-orbit",
+    hashtag: "#PocketOrbit",
+    question: "What's your favorite level, and why?",
+    post: (first) =>
+      `Pocket Orbit is out today on Switch and Steam! Seven of us made it in two years. ${first}'s favorite level is the one where gravity turns off halfway. #PocketOrbit`,
     owner: "mock_mark",
-    ...aroundNow(relayZone, -100),
+    ...aroundNow(relayZone, -100, 30),
     relay: { tz: relayZone, gap: 30 },
     people: [
       ["mock_chloe"],
@@ -216,7 +305,18 @@ const plans: Plan[] = [
   },
   {
     id: "relay-full",
-    title: "Relay, full: one slot, already taken",
+    state: "Relay, full: one slot, already taken",
+    title: "Danube Devs meetup #42 tonight",
+    facts: [
+      "Danube Devs #42 is tonight at 18:30",
+      "Two talks: one on testing, one on accessibility",
+      "Pizza is on the house",
+    ],
+    link: "https://danubedevs.example/42",
+    hashtag: "#DanubeDevs",
+    question: "Why should someone come tonight?",
+    post: (first) =>
+      `Danube Devs #42 is tonight at 18:30: a talk on testing, one on accessibility, and pizza. ${first} will be there early. #DanubeDevs`,
     owner: "mock_maya",
     day: plusDays(dayIn(now, "Europe/Budapest"), 1),
     localTime: "17:00",
@@ -229,7 +329,18 @@ const plans: Plan[] = [
   },
   {
     id: "relay-done",
-    title: "Relay, done",
+    state: "Relay, done",
+    title: "Kiosk Bakery turns one",
+    facts: [
+      "Kiosk Bakery opened one year ago today",
+      "It bakes 300 loaves every morning",
+      "Every coffee is half price today",
+    ],
+    link: "https://kioskbakery.example/one",
+    hashtag: "#KioskOne",
+    question: "What's the one thing everyone should try?",
+    post: (first) =>
+      `Kiosk Bakery is one year old today, and every coffee is half price. ${first}'s tip: the cardamom bun, before 9, before it's gone. #KioskOne`,
     owner: "mock_zsofia",
     day: plusDays(dayIn(now, "Europe/Budapest"), -3),
     localTime: "09:00",
@@ -254,15 +365,11 @@ for (const plan of plans) {
     relayGapMin: plan.relay?.gap,
     createdAt: new Date(now),
     title: plan.title,
-    facts: [
-      "The new office opens on Monday",
-      "It's in Lisbon, next to the river",
-      "There's room for 40 people",
-    ],
-    link: "https://example.com/lisbon",
-    hashtags: ["#LisbonOffice"],
+    facts: plan.facts,
+    link: plan.link,
+    hashtags: [plan.hashtag],
     avoid: [],
-    questions: ["What will you miss least about the old office?"],
+    questions: [plan.question],
     tone: "any",
     day: plan.day,
     localTime: plan.localTime,
@@ -302,7 +409,7 @@ for (const plan of plans) {
     const scheduled = {
       ...base,
       relaySlot,
-      text: `Our new office in Lisbon opens on Monday. ${person.name.split(" ")[0]} here, and I can't wait to see the river from my desk. #LisbonOffice`,
+      text: plan.post(person.name.split(" ")[0]),
       bufferPostId: seededPostId(personId, dueAt),
       dueAt,
     };
@@ -336,6 +443,6 @@ console.log(
   `Removed ${removed} old mock posts. ${(await (await users()).countDocuments({ providerAccountId: /^mock_/ })) || 0} mock people in ${db().databaseName}.`,
 );
 for (const plan of plans) {
-  console.log(`  https://localhost:${port}/c/${plan.id}  ${plan.title}`);
+  console.log(`  https://localhost:${port}/c/${plan.id}  ${plan.state}`);
 }
 await closeDb();

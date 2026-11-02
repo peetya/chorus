@@ -65,11 +65,13 @@ test("an unknown tone falls back to letting everyone choose", () => {
   assert.equal(parseChorus(form({ tone: "angry" })).input.tone, "any");
 });
 
-test("starting a Chorus needs a sign-in", async (t) => {
+test("starting a Chorus needs a sign-in, and comes back to the form after it", async (t) => {
   const base = await listen(t);
   const res = await fetch(`${base}/new`, { redirect: "manual" });
   assert.equal(res.status, 302);
-  assert.equal(res.headers.get("location"), "/login");
+  assert.equal(res.headers.get("location"), "/login?next=/new");
+  const login = await (await fetch(`${base}/login?next=/new`)).text();
+  assert.match(login, /href="\/login\/buffer\?next=%2Fnew"/);
 });
 
 test("a new Chorus shows up in My Choruses, and only there", async (t) => {

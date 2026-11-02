@@ -225,7 +225,7 @@ const NEW_CHORUS_SCRIPTS = ["brief.js", "new-images.js", "focus.js"];
 
 pages.get("/new", async (req, res) => {
   const session = readSession(req);
-  if (!session) return res.redirect("/login");
+  if (!session) return res.redirect("/login?next=/new");
   const blocked = await startBlocked(session);
   if (blocked) return res.send(blocked);
   const images = await imagesIn({ ownerId: session.userId, chorusId: null });

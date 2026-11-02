@@ -42,6 +42,7 @@ async function startChorus(base: string, day = addDays(14)): Promise<string> {
 
 test("only our own Chorus pages are allowed after sign-in", () => {
   assert.equal(safeNext("/c/AE1lcZZs/join"), "/c/AE1lcZZs/join");
+  assert.equal(safeNext("/new"), "/new");
   assert.equal(safeNext("https://evil.example"), "/me");
   assert.equal(safeNext("//evil.example/c/x"), "/me");
   assert.equal(safeNext(undefined), "/me");

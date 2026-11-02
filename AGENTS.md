@@ -75,7 +75,8 @@ clock: the tests and `npm run mock-data` move a Chorus's `day` or a post's `dueA
   formatters (short names like "Péter H.", network names, days). Routes stay in `pages.ts` and
   `auth.ts` and hold no markup
 - `src/config.ts`: `env()` and `secretEnv()`, read when used so the tests run without a `.env`
-- `public/`: static files: `style.css` (the design's colors and fonts), the logo, and
+- `public/`: static files: `style.css` (the design's colors and fonts), `fonts/` (the three fonts, served
+  from here so no page asks Google for them, with their OFL licenses), the logo, and
   `brief.js` (list rows and the live fact card on the form), `copy.js` (the invite link's copy button), `write.js` (sends the text to
   `/c/:id/post/check` while you type; the checks run only on the server, so they live in one place, and
   swaps the image preview), `new-images.js` (uploads images on "Start a Chorus" as they are picked),

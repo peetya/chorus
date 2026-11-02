@@ -134,7 +134,7 @@ export function landingPage(viewer: PageOptions["viewer"]): string {
 
   <footer class="site-footer">
     <span>startchorus.com · ${new Date().getFullYear()}</span>
-    <span><a href="/contact" class="footer-link">Contact</a> · Built with ❤️ and <a href="https://github.com/peetya/chorus" class="footer-link">in the open</a></span>
+    <span><a href="/contact" class="footer-link">Contact</a> · <a href="/privacy" class="footer-link">Privacy</a> · Built with ❤️ and <a href="https://github.com/peetya/chorus" class="footer-link">in the open</a></span>
   </footer>
 </body>
 </html>

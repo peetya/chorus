@@ -63,7 +63,7 @@ export function signInPage(next: string, joining: Chorus | null = null): Html {
     <li class="promise">${CHECK}<span>Nothing is scheduled until you approve your post.</span></li>
     <li class="promise">${CHECK}<span>Buffer asks you to allow Chorus. You can remove it any time, on your account page or in Buffer.</span></li>
   </ul>
-  <p class="hint">Chorus is an independent project. It works with Buffer's public API, but it isn't made or supported by Buffer.</p>
+  <p class="hint">Chorus is an independent project. It works with Buffer's public API, but it isn't made or supported by Buffer. <a href="/privacy">How Chorus handles your data</a>.</p>
 </div>
 <div class="sign-in-map" aria-hidden="true">
   <div class="map-frame">

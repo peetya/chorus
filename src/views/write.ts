@@ -5,7 +5,8 @@ import { type Html, html } from "../html.ts";
 import type { ChorusImage } from "../images.ts";
 import { MAX_ANSWER, MAX_TEXT, type Post } from "../posts.ts";
 import { imagePicker } from "./images.ts";
-import { place, serviceName, shortName, showDay, timing } from "./labels.ts";
+import { place, serviceName, shortName, showDay } from "./labels.ts";
+import { timing } from "./when.ts";
 
 export function checkList(result: CheckResult): Html {
   return html`<p class="counter${result.length > result.limit && " over"}" data-counter>${result.length.toLocaleString("en")} / ${result.limit.toLocaleString("en")}</p>

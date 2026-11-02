@@ -12,6 +12,7 @@ import {
 } from "../time.ts";
 import { reviewImage } from "./images.ts";
 import { ordinal, place, serviceName, showDay } from "./labels.ts";
+import { clockAt } from "./when.ts";
 import { checkList } from "./write.ts";
 
 // Every zone the server knows, plus the channel's own: Node's list has some old names ("Asia/Calcutta"),
@@ -68,7 +69,7 @@ export function reviewPage(
   let when = waveWhen(chorus, post);
   if (isRelay(chorus) && slot != null) {
     const at = relaySlots(chorus)[slot];
-    when = html`<p>Your post goes out at <strong>${localTime(at, chorus.relayTz)} ${place(chorus.relayTz)} time</strong> on ${showDay(chorus.day)}, ${ordinal(slot + 1)} in line, from ${post.channelName} (${serviceName(post.channelService)}). If someone else approves just before you, you get the next free slot.</p>`;
+    when = html`<p>Your post goes out at <strong>${clockAt(at, chorus.relayTz, `${place(chorus.relayTz)} time`)}</strong> on ${showDay(chorus.day)}, ${ordinal(slot + 1)} in line, from ${post.channelName} (${serviceName(post.channelService)}). If someone else approves just before you, you get the next free slot.</p>`;
   }
   return html`<div class="page-head">
   <a href="/c/${chorus._id}/post" class="back">Back to editing</a>

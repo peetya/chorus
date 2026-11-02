@@ -1,6 +1,7 @@
 import type { Chorus } from "../choruses.ts";
 import { type Html, html, raw } from "../html.ts";
-import { showDay, timing } from "./labels.ts";
+import { showDay } from "./labels.ts";
+import { timing } from "./when.ts";
 
 export function signInProblem(message: string): Html {
   return html`<h1>Sign in</h1>

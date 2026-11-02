@@ -1,7 +1,7 @@
 import { type Chorus, isRelay, relaySlots, zoneOf } from "../choruses.ts";
 import { type Html, html } from "../html.ts";
 import { type Post, WITHDRAW_BEFORE_MS } from "../posts.ts";
-import { localDay, localTime, utcOffset, zonedToUtc } from "../time.ts";
+import { localDay, utcOffset, zonedToUtc } from "../time.ts";
 import {
   initials,
   ordinal,
@@ -9,9 +9,9 @@ import {
   serviceName,
   shortName,
   showDay,
-  timing,
 } from "./labels.ts";
 import { until } from "./my-choruses.ts";
+import { clockAt, timing, timingText } from "./when.ts";
 
 export type Joined = { name: string; post: Post };
 
@@ -35,7 +35,7 @@ export function joinBox({ chorus, post, over, isOrganizer }: ChorusView): Html {
       `, ${ordinal(post.relaySlot + 1)} in line`;
     const canWithdraw = post.dueAt.getTime() > Date.now() + WITHDRAW_BEFORE_MS;
     return html`<p class="pill accent">Scheduled</p>
-<p class="joined">Your post goes out on <strong>${localDay(post.dueAt, zone)} at ${localTime(post.dueAt, zone)}</strong> ${place(zone)} time${inLine}, from ${post.channelName} (${serviceName(post.channelService)}).</p>
+<p class="joined">Your post goes out on <strong>${localDay(post.dueAt, zone)} at ${clockAt(post.dueAt, zone, `${place(zone)} time`)}</strong>${inLine}, from ${post.channelName} (${serviceName(post.channelService)}).</p>
 ${
   canWithdraw
     ? html`<form method="post" action="/c/${chorus._id}/post/withdraw"><button type="submit" class="button">Withdraw to change it</button></form>
@@ -110,7 +110,7 @@ function personRow({ name, post }: Joined, chorus: Chorus): Html {
   <td>${serviceName(post.channelService)}</td>
   <td>${
     post.status === "scheduled" && post.dueAt
-      ? html`<span class="mono">${localTime(post.dueAt, zone)}</span>${post.relaySlot !== undefined && html` <span class="muted">· ${ordinal(post.relaySlot + 1)}</span>`}`
+      ? html`<span class="mono">${clockAt(post.dueAt, zone)}</span>${post.relaySlot !== undefined && html` <span class="muted">· ${ordinal(post.relaySlot + 1)}</span>`}`
       : html`<span class="muted">not scheduled yet</span>`
   }${post.lastError && html`<br><span class="small problem">Buffer refused it: ${post.lastError}</span>`}</td>
   <td><span class="status ${standing(post)}">${statusLabel(post)}</span></td>
@@ -129,12 +129,12 @@ function dashboard(view: ChorusView): Html {
     isRelay(chorus) &&
     `${joined.filter(({ post }) => post.relaySlot !== undefined).length} of ${relaySlots(chorus).length} slots taken`;
   const reminder = isRelay(chorus)
-    ? `A quick reminder: "${chorus.title}" is a relay on ${showDay(chorus.day)}, ${timing(chorus)}. Your post isn't scheduled yet, and the slots go in the order people approve. Write it and approve it here: ${inviteUrl}`
+    ? `A quick reminder: "${chorus.title}" is a relay on ${showDay(chorus.day)}, ${timingText(chorus)}. Your post isn't scheduled yet, and the slots go in the order people approve. Write it and approve it here: ${inviteUrl}`
     : `A quick reminder: "${chorus.title}" goes out on ${showDay(chorus.day)} at ${chorus.localTime}, in your own time zone. Your post isn't scheduled yet. Write it and approve it here: ${inviteUrl}`;
   return html`<div class="page-head">
   <a href="/me" class="back">My Choruses</a>
   <h1>${chorus.title}</h1>
-  <p class="mono muted">${[showDay(chorus.day), timing(chorus), slotsTaken, until(chorus.day)].filter(Boolean).join(" · ")}</p>
+  <p class="mono muted">${showDay(chorus.day)} · ${timing(chorus)}${[slotsTaken, until(chorus.day)].filter(Boolean).map((part) => ` · ${part}`)}</p>
   ${(view.live || view.over) && html`<a href="/c/${chorus._id}" class="small">${view.live ? "See the live wall" : "See the finished wall"}</a>`}
 </div>
 <section class="invite-link">

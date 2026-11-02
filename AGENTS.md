@@ -70,7 +70,8 @@ comes with the wave.
   swaps the image preview), `new-images.js` (uploads images on "Start a Chorus" as they are picked),
   `focus.js` (dragging an image's crosshair moves its focus point and swaps in the new crops),
   `landing.js` (the landing map's moving daylight), `menu.js` (closes the header's account menu on a click
-  outside or Escape), `confetti.js` (once per finished Chorus) and `intro.js`
+  outside or Escape), `your-time.js` (adds the reader's own time next to a time in another place's
+  time zone, from `clockAt()` in `src/views/when.ts`), `confetti.js` (once per finished Chorus) and `intro.js`
   (starts the finished page's SVG animations; all of them stay still under reduced motion).
   Pages work without JS where they can
 - `test/`: `node --test` tests, named `*.test.ts`. `test/server.ts` starts the app on a free port

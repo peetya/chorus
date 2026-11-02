@@ -5,6 +5,7 @@ import { localTime, utcOffset } from "../time.ts";
 import { type ChorusView, type Joined, joinBox } from "./chorus.ts";
 import { initials, place, serviceName, shortName, showDay } from "./labels.ts";
 import { finishedMap, liveMap } from "./map.ts";
+import { clockAt } from "./when.ts";
 
 export type Entry = Joined & { post: Post & { dueAt: Date } };
 
@@ -32,7 +33,7 @@ function entry({ name, post }: Entry): Html {
   return html`<li class="wall-post ${post.status}">
   <span class="avatar">${initials(name)}</span>
   <span class="wall-who"><strong>${shortName(name)}</strong> <span class="muted">${serviceName(post.channelService)}</span></span>
-  <span class="mono">${localTime(post.dueAt, post.channelTz)}</span>
+  <span class="mono">${clockAt(post.dueAt, post.channelTz)}</span>
   <span class="wall-state">${state(post)}</span>
 </li>`;
 }

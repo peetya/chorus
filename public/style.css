@@ -2524,6 +2524,14 @@ a.chorus-card.live:hover {
   align-self: flex-start;
 }
 
+.privacy ul {
+  padding-left: 20px;
+}
+
+.privacy li + li {
+  margin-top: 6px;
+}
+
 /* Sign in: the form on the left, the map on the dark side on the right, like the landing hero. On a phone
    the map comes after the form, so the button stays near the top. */
 

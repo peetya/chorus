@@ -35,3 +35,12 @@ test("a form posted from another site is refused", async (t) => {
   assert.equal((await logout("null")).status, 403);
   assert.notEqual((await logout(base)).status, 403);
 });
+
+test("the privacy page is public, and the sign-in page links to it", async (t) => {
+  const base = await listen(t);
+  const privacy = await fetch(`${base}/privacy`);
+  assert.equal(privacy.status, 200);
+  assert.match(await privacy.text(), /No analytics, no ads, no tracking/);
+  const login = await (await fetch(`${base}/login`)).text();
+  assert.match(login, /href="\/privacy"/);
+});

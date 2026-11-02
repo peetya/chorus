@@ -87,6 +87,7 @@ import { landingPage } from "./views/landing.ts";
 import { liveMap } from "./views/map.ts";
 import { myChoruses } from "./views/my-choruses.ts";
 import { cantStart, newChorusForm } from "./views/new-chorus.ts";
+import { privacyPage } from "./views/privacy.ts";
 import {
   relayFinishedPage,
   relaySunPanel,
@@ -158,6 +159,13 @@ pages.post(
     res.send(page("Message sent", sentPage(), options));
   },
 );
+
+pages.get("/privacy", (req, res) => {
+  const session = readSession(req);
+  res.send(
+    page("Privacy", privacyPage(), { viewer: session && viewer(session) }),
+  );
+});
 
 pages.get("/me", async (req, res) => {
   const session = readSession(req);

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { MongoServerError } from "mongodb";
 import type { Answer } from "./ai.ts";
 import type { Channel } from "./buffer.ts";
 import { type Relay, relaySlots } from "./choruses.ts";
@@ -29,6 +30,7 @@ export type Post = {
     | "sent"
     | "failed";
   lockedAt?: Date;
+  withdrawFrom?: "scheduled" | "drafted";
   bufferPostId?: string;
   dueAt?: Date;
   lastError?: string; // Buffer's reason when it refused or failed the post
@@ -165,6 +167,17 @@ export async function approvedByOthers(
 
 export async function postsOf(chorusId: string): Promise<Post[]> {
   return (await posts()).find({ chorusId }).sort({ joinedAt: 1 }).toArray();
+}
+
+// How many other people joined these Choruses.
+export async function othersIn(
+  chorusIds: string[],
+  userId: string,
+): Promise<number> {
+  return (await posts()).countDocuments({
+    chorusId: { $in: chorusIds },
+    userId: { $ne: userId },
+  });
 }
 
 export async function joinedBy(userId: string): Promise<Post[]> {
@@ -341,7 +354,13 @@ export async function backToDraft(id: string, lastError?: string) {
     { _id: id },
     {
       $set: { status: "drafting", ...(lastError && { lastError }) },
-      $unset: { lockedAt: "", bufferPostId: "", dueAt: "", nextCheckAt: "" },
+      $unset: {
+        lockedAt: "",
+        withdrawFrom: "",
+        bufferPostId: "",
+        dueAt: "",
+        nextCheckAt: "",
+      },
     },
   );
 }
@@ -359,25 +378,38 @@ export async function deletedInBuffer(id: string, status: Post["status"]) {
 }
 
 // Only well before it goes out: deleting it at the last minute could remove a live post. A draft
-// doesn't go out, so it can come back any time.
+// doesn't go out, so it can come back any time. A withdraw whose request died can be tried again under
+// the same rules; withdrawFrom remembers what the post was before the first try.
 export async function claimForWithdraw(
   chorusId: string,
   userId: string,
 ): Promise<Post | null> {
+  const now = new Date();
+  const notTooLate = { $gt: new Date(now.getTime() + WITHDRAW_BEFORE_MS) };
   return (await posts()).findOneAndUpdate(
     {
       chorusId,
       userId,
       $or: [
-        {
-          status: "scheduled",
-          dueAt: { $gt: new Date(Date.now() + WITHDRAW_BEFORE_MS) },
-        },
+        { status: "scheduled", dueAt: notTooLate },
         { status: "drafted" },
+        {
+          status: "withdrawing",
+          lockedAt: { $lt: new Date(now.getTime() - LOCK_MS) },
+          $or: [{ withdrawFrom: "drafted" }, { dueAt: notTooLate }],
+        },
       ],
     },
-    { $set: { status: "withdrawing", lockedAt: new Date() } },
-    { returnDocument: "before" },
+    [
+      {
+        $set: {
+          withdrawFrom: { $ifNull: ["$withdrawFrom", "$status"] },
+          status: "withdrawing",
+          lockedAt: now,
+        },
+      },
+    ],
+    { returnDocument: "after" },
   );
 }
 
@@ -403,7 +435,7 @@ export async function stillScheduled(
 ) {
   await (await posts()).updateOne(
     { _id: id },
-    { $set: { status }, $unset: { lockedAt: "" } },
+    { $set: { status }, $unset: { lockedAt: "", withdrawFrom: "" } },
   );
 }
 
@@ -449,7 +481,7 @@ export async function takeSlot(chorus: Relay, post: Post) {
       );
       return slot;
     } catch (err) {
-      if ((err as { code?: number }).code !== 11000) throw err;
+      if (!(err instanceof MongoServerError && err.code === 11000)) throw err;
       taken.add(slot);
     }
   }

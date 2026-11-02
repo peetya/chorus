@@ -9,3 +9,29 @@ test("health check answers ok", async (t) => {
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { ok: true });
 });
+
+test("pages refuse scripts from anywhere else and don't name the framework", async (t) => {
+  const base = await listen(t);
+  const res = await fetch(`${base}/`);
+
+  assert.match(
+    res.headers.get("content-security-policy") ?? "",
+    /script-src 'self';/,
+  );
+  assert.equal(res.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(res.headers.get("x-powered-by"), null);
+});
+
+test("a form posted from another site is refused", async (t) => {
+  const base = await listen(t);
+  const logout = (origin: string) =>
+    fetch(`${base}/logout`, {
+      method: "POST",
+      headers: { origin },
+      redirect: "manual",
+    });
+
+  assert.equal((await logout("https://evil.example")).status, 403);
+  assert.equal((await logout("null")).status, 403);
+  assert.notEqual((await logout(base)).status, 403);
+});

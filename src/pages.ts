@@ -65,6 +65,7 @@ import {
   markScheduled,
   markSent,
   nextSlot,
+  othersIn,
   type Post,
   postsOf,
   saveAiDraft,
@@ -171,11 +172,10 @@ pages.get("/account", async (req, res) => {
   }
   const mine = await joinedBy(session.userId);
   const owned = await listOwned(session.userId);
-  const othersJoined = (
-    await Promise.all(owned.map((chorus) => postsOf(chorus._id)))
-  )
-    .flat()
-    .filter((post) => post.userId !== session.userId).length;
+  const othersJoined = await othersIn(
+    owned.map((chorus) => chorus._id),
+    session.userId,
+  );
   res.send(
     page(
       "Account",
@@ -638,6 +638,7 @@ pages.post(
     const chorus = await getChorus(req.params.id);
     if (!chorus) return notFound(res, session);
     if (!session) return res.redirect(303, `/login?next=/c/${chorus._id}/post`);
+    if (isOver(chorus)) return res.redirect(303, `/c/${chorus._id}`);
     const text = typeof req.body?.text === "string" ? req.body.text : "";
     // A draft is saved even when it's too long: the checks stop it at approval, not here.
     const saved = await saveText(
@@ -863,10 +864,10 @@ pages.post("/c/:id/post/withdraw", async (req, res) => {
   const session = readSession(req);
   const chorus = await getChorus(req.params.id);
   if (!chorus) return notFound(res, session);
-  if (!session) return res.redirect(303, "/login");
+  if (!session) return res.redirect(303, `/login?next=/c/${chorus._id}`);
   const post = await claimForWithdraw(chorus._id, session.userId);
   if (!post?.bufferPostId) return res.redirect(303, `/c/${chorus._id}`);
-  const before = post.status === "drafted" ? "drafted" : "scheduled";
+  const before = post.withdrawFrom ?? "scheduled";
   try {
     const problem = await deletePost(
       await getAccessToken(session.userId),

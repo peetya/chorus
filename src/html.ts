@@ -31,12 +31,15 @@ type Value = Html | string | number | boolean | null | undefined | Value[];
 function render(value: Value): string {
   if (value instanceof Html) return value.value;
   if (Array.isArray(value)) return value.map(render).join("");
-  if (value === null || value === undefined || value === false) return "";
+  if (value === null || value === undefined || typeof value === "boolean") {
+    return "";
+  }
   return escapeHtml(String(value));
 }
 
 // Escapes every value, so a page can't forget to. Nested html`` and arrays of it pass through as they are,
-// and false, null and undefined render as nothing, so `${done && html`...`}` works.
+// and true, false, null and undefined render as nothing, so `${done && html`...`}` works and a stray
+// `${done}` doesn't print "true".
 export function html(strings: TemplateStringsArray, ...values: Value[]): Html {
   return new Html(
     strings[0] +

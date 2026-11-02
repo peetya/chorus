@@ -20,7 +20,7 @@ test("html escapes every value", () => {
 test("nested html and lists pass through, empty values render as nothing", () => {
   const items = ["a", "<b>"].map((item) => html`<li>${item}</li>`);
   assert.equal(
-    html`<ul>${items}</ul>${false}${null}${undefined}${0}`.value,
+    html`<ul>${items}</ul>${false}${true}${null}${undefined}${0}`.value,
     "<ul><li>a</li><li>&lt;b&gt;</li></ul>0",
   );
 });

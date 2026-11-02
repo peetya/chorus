@@ -3,7 +3,11 @@ for (const button of document.querySelectorAll("[data-copy]")) {
   button.addEventListener("click", async () => {
     const input = document.getElementById(button.dataset.copy);
     input.select();
-    await navigator.clipboard.writeText(input.value);
-    button.textContent = "Copied";
+    try {
+      await navigator.clipboard.writeText(input.value);
+      button.textContent = "Copied";
+    } catch {
+      // The browser blocked the clipboard. The text is selected, so it can be copied by hand.
+    }
   });
 }

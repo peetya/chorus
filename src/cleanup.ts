@@ -8,7 +8,7 @@ import { dropTokens, users } from "./users.ts";
 
 const DAY_MS = 86_400_000;
 
-// A Chorus is over two days after its day (see isOver), and its data goes the day after that.
+// A wave is over two days after its day (see isOver), a relay sooner, and the data goes the day after that.
 const KEEP_DAYS = 3;
 
 // The day of the person's last Chorus, organized or joined.
@@ -102,6 +102,7 @@ export async function dailyCleanup(): Promise<{
       createdAt: { $lt: new Date(Date.now() - 86_400_000) },
     }));
 
+  // Two queries per connected person, once a day. Fine for a few thousand people.
   let tokens = 0;
   const connected = await (await users())
     .find({ tokenEnc: { $exists: true } }, { projection: { signedInAt: 1 } })

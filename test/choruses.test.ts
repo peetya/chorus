@@ -52,6 +52,15 @@ test("the form says what's missing or wrong", () => {
   assert.equal(errors.length, 7);
 });
 
+test("the link must be https", () => {
+  const link = (value: string) =>
+    parseChorus(form({ link: value })).errors.includes(
+      "The link must start with https://",
+    );
+  assert.equal(link("http://example.com"), true);
+  assert.equal(link("https://example.com"), false);
+});
+
 test("an unknown tone falls back to letting everyone choose", () => {
   assert.equal(parseChorus(form({ tone: "angry" })).input.tone, "any");
 });

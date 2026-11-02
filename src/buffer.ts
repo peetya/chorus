@@ -131,11 +131,12 @@ export class BufferApiError extends Error {
   }
 }
 
-// Mock mode answers from fake people instead of Buffer (see mock.ts). Never in production.
+// Mock mode answers from fake people instead of Buffer (see mock.ts). Only on your own machine: on a
+// deployment, preview too, anyone could sign in as anyone.
 export function isMock(): boolean {
   if (process.env.BUFFER_MOCK !== "1") return false;
-  if (process.env.VERCEL_ENV === "production") {
-    throw new Error("BUFFER_MOCK is on in production. Turn it off.");
+  if (process.env.VERCEL) {
+    throw new Error("BUFFER_MOCK is on in a deployment. Turn it off.");
   }
   return true;
 }
@@ -257,10 +258,7 @@ export async function getPost(
 }
 
 // Some networks refuse a post without their own metadata. Google Business goes under "google".
-function metadataFor(
-  service: string,
-  text: string,
-): Record<string, unknown> | undefined {
+function metadataFor(service: string): Record<string, unknown> | undefined {
   switch (service) {
     case "instagram":
       return { instagram: { type: "post", shouldShareToFeed: true } };
@@ -268,8 +266,6 @@ function metadataFor(
       return { facebook: { type: "post" } };
     case "googlebusiness":
       return { google: { type: "whats_new" } };
-    case "youtube":
-      return { youtube: { title: text.split("\n")[0].slice(0, 100) } };
     default:
       return undefined;
   }
@@ -315,7 +311,7 @@ export async function createPost(
       needsApproval: false,
       aiAssisted: post.aiAssisted,
       saveToDraft: post.saveToDraft,
-      metadata: metadataFor(post.service, post.text),
+      metadata: metadataFor(post.service),
     },
   });
   return result.post

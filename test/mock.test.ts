@@ -65,9 +65,9 @@ test("someone not on the list can't sign in", async (t) => {
   assert.equal(res.status, 400);
 });
 
-test("mock mode refuses to run in production", async (t) => {
-  process.env.VERCEL_ENV = "production";
-  t.after(() => delete process.env.VERCEL_ENV);
+test("mock mode refuses to run on a deployment", async (t) => {
+  process.env.VERCEL = "1";
+  t.after(() => delete process.env.VERCEL);
   const base = await listen(t);
   const res = await fetch(`${base}/login/buffer`);
   assert.equal(res.status, 500);

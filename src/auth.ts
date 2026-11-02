@@ -25,7 +25,9 @@ type OAuthState = { verifier: string; state: string; next: string };
 // Where to go after sign-in. Only our own pages, so a link can't send people to another site.
 export function safeNext(next: unknown): string {
   return typeof next === "string" &&
-    (/^\/c\/[\w-]{1,20}(\/join|\/post)?$/.test(next) || next === "/account")
+    (/^\/c\/[\w-]{1,20}(\/join|\/post)?$/.test(next) ||
+      next === "/account" ||
+      next === "/new")
     ? next
     : "/me";
 }

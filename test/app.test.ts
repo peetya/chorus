@@ -44,3 +44,12 @@ test("the privacy page is public, and the sign-in page links to it", async (t) =
   const login = await (await fetch(`${base}/login`)).text();
   assert.match(login, /href="\/privacy"/);
 });
+
+test("pages load their fonts from Chorus, not from Google", async (t) => {
+  const base = await listen(t);
+  for (const path of ["/", "/login", "/privacy"]) {
+    const page = await (await fetch(`${base}${path}`)).text();
+    assert.doesNotMatch(page, /googleapis|gstatic/);
+    assert.match(page, /href="\/fonts\/instrument-sans-latin\.woff2"/);
+  }
+});

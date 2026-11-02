@@ -34,7 +34,6 @@ export function privacyPage(): Html {
   <li><strong>OpenAI</strong>, only when you click "Draft with AI": your answers and the brief go to OpenAI, which writes a first draft. OpenAI doesn't train its models on this, and keeps it for up to 30 days.</li>
   <li><strong>MongoDB Atlas</strong> holds the database, in Frankfurt.</li>
   <li><strong>Vercel</strong> runs the site, in Frankfurt, and keeps short request logs. Images are stored with Vercel Blob, at links that are hard to guess but public, because Buffer has to fetch them.</li>
-  <li><strong>Google Fonts</strong> serves the fonts, so Google sees your IP address when a page loads.</li>
 </ul>
 
 <h2 class="sub-title">Cookies</h2>

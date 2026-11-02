@@ -139,6 +139,11 @@ The world map uses [Natural Earth](https://www.naturalearthdata.com/) land shape
 positions from the [tz database](https://www.iana.org/time-zones), both public domain.
 `node scripts/world-map.ts` rebuilds `public/world.svg` and `src/zones.ts` from them.
 
+The fonts are [Bricolage Grotesque](https://github.com/ateliertriay/bricolage),
+[Instrument Sans](https://github.com/Instrument/instrument-sans) and
+[JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), under the SIL Open Font License. They are
+served from `public/fonts`, with their licenses.
+
 Chorus is an independent project. It works with Buffer's public API, but it isn't made or supported by
 Buffer.
 

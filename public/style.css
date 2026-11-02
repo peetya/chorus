@@ -351,6 +351,7 @@ legend {
 
 input[type="text"],
 input[type="url"],
+input[type="email"],
 input[type="date"],
 input[type="time"],
 textarea,
@@ -2507,6 +2508,20 @@ a.chorus-card.live:hover {
 
 .footer-link {
   color: var(--muted);
+}
+
+/* The contact form's field for bots: off screen, so people never see it. */
+.honeypot {
+  position: absolute;
+  left: -9999px;
+}
+
+.contact {
+  align-items: stretch;
+}
+
+.contact .button {
+  align-self: flex-start;
 }
 
 /* Sign in: the form on the left, the map on the dark side on the right, like the landing hero. On a phone

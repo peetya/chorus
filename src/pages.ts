@@ -44,6 +44,7 @@ import {
   removeImage,
   updateImage,
 } from "./images.ts";
+import { parseMessage, saveMessage } from "./messages.ts";
 import {
   approvedByOthers,
   backToDraft,
@@ -78,6 +79,7 @@ import { waveDueAt } from "./time.ts";
 import { dropTokens, getAccessToken, getUser, namesOf } from "./users.ts";
 import { accountPage, deletedPage } from "./views/account.ts";
 import { type ChorusView, chorusNotFound, chorusPage } from "./views/chorus.ts";
+import { contactPage, sentPage, tooManyPage } from "./views/contact.ts";
 import { formImageCard } from "./views/images.ts";
 import { joinPage } from "./views/join.ts";
 import { shortName } from "./views/labels.ts";
@@ -127,6 +129,35 @@ pages.get("/", (req, res) => {
   const session = readSession(req);
   res.send(landingPage(session && viewer(session)));
 });
+
+pages.get("/contact", (req, res) => {
+  const session = readSession(req);
+  res.send(
+    page("Contact", contactPage(), { viewer: session && viewer(session) }),
+  );
+});
+
+pages.post(
+  "/contact",
+  express.urlencoded({ extended: false, limit: "16kb" }),
+  async (req, res) => {
+    const session = readSession(req);
+    const options = { viewer: session && viewer(session) };
+    // Only a bot fills in the hidden field. It gets the same answer, so it doesn't learn anything.
+    if (req.body?.website)
+      return res.send(page("Message sent", sentPage(), options));
+    const { input, errors } = parseMessage(req.body ?? {});
+    if (errors.length > 0) {
+      return res
+        .status(400)
+        .send(page("Contact", contactPage(input, errors), options));
+    }
+    if (!(await saveMessage(input))) {
+      return res.status(429).send(page("Contact", tooManyPage(), options));
+    }
+    res.send(page("Message sent", sentPage(), options));
+  },
+);
 
 pages.get("/me", async (req, res) => {
   const session = readSession(req);

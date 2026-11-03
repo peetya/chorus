@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { addDays, choruses, plusDays } from "../src/choruses.ts";
 import { dailyCleanup } from "../src/cleanup.ts";
 import { posts } from "../src/posts.ts";
-import { users } from "../src/users.ts";
+import { dropTokens, users } from "../src/users.ts";
 import { showDay } from "../src/views/labels.ts";
 import { listen, mockSession, useTestDb } from "./server.ts";
 
@@ -54,7 +54,7 @@ async function userOf(person: string) {
   return (await users()).findOne({ providerAccountId: person });
 }
 
-test("the account page says when the connection goes, and disconnect works", async (t) => {
+test("the account page says when the connection goes, and what happens once it's gone", async (t) => {
   const base = await listen(t);
   const zsofia = await mockSession(base, "mock_zsofia");
   const day = addDays(14);
@@ -73,8 +73,10 @@ test("the account page says when the connection goes, and disconnect works", asy
   assert.match(page, /1 post is still scheduled in your Buffer queue/);
   assert.match(page, /1 person joined your Choruses/);
 
-  await post(base, "/account/disconnect", zsofia);
-  assert.equal((await userOf("mock_zsofia"))?.tokenEnc, undefined);
+  assert.doesNotMatch(page, /account\/disconnect/);
+
+  // Like the daily cleanup does.
+  await dropTokens((await userOf("mock_zsofia"))?._id ?? "");
   const after = await (
     await fetch(`${base}/account`, { headers: { cookie: zsofia } })
   ).text();

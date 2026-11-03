@@ -41,7 +41,7 @@ export function privacyPage(): Html {
 
 <h2 class="sub-title">Your choices</h2>
 <ul>
-  <li>On your <a href="/account">account page</a> you can disconnect Buffer or delete your data right away. Posts already in your Buffer queue stay there, so remove them in Buffer if you want.</li>
+  <li>On your <a href="/account">account page</a> you can delete your data right away. To end Chorus's access to Buffer sooner, remove Chorus in your Buffer settings. Posts already in your Buffer queue stay there, so remove them in Buffer if you want.</li>
   <li>You can ask to see, correct or delete what Chorus keeps about you through the <a href="/contact">contact form</a>.</li>
   <li>You can also complain to the Hungarian data protection authority (<a href="https://naih.hu/">NAIH</a>).</li>
 </ul>

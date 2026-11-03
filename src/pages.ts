@@ -77,7 +77,7 @@ import {
 } from "./posts.ts";
 import { bufferCanFetch } from "./storage.ts";
 import { waveDueAt } from "./time.ts";
-import { dropTokens, getAccessToken, getUser, namesOf } from "./users.ts";
+import { getAccessToken, getUser, namesOf } from "./users.ts";
 import { accountPage, deletedPage } from "./views/account.ts";
 import { type ChorusView, chorusNotFound, chorusPage } from "./views/chorus.ts";
 import { contactPage, sentPage, tooManyPage } from "./views/contact.ts";
@@ -229,13 +229,6 @@ pages.get("/account", async (req, res) => {
       { viewer: viewer(session) },
     ),
   );
-});
-
-pages.post("/account/disconnect", async (req, res) => {
-  const session = readSession(req);
-  if (!session) return res.redirect(303, "/login?next=/account");
-  await dropTokens(session.userId);
-  res.redirect(303, "/account");
 });
 
 pages.post(

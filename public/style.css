@@ -1635,24 +1635,6 @@ a.finished-post:hover {
   gap: 24px;
 }
 
-.account-who {
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 14px;
-}
-
-.account-name {
-  flex: 1;
-  min-width: 0;
-}
-
-.avatar.big {
-  width: 48px;
-  height: 48px;
-  font-size: 15px;
-}
-
 .account ul {
   margin: 0;
   padding-left: 20px;

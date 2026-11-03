@@ -11,6 +11,8 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # A run once hung in "Stop containers" and had to be cancelled by hand. A normal run takes about a minute.
+    timeout-minutes: 10
     services:
       mongo:
         # MongoDB 8 refuses to start on the runner's Linux kernel (6.19 to 7.0.13, SERVER-121912).
@@ -30,6 +32,7 @@ jobs:
 
   secrets:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: read

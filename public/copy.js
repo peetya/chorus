@@ -7,7 +7,7 @@ for (const button of document.querySelectorAll("[data-copy]")) {
       await navigator.clipboard.writeText(input.value);
       button.textContent = "Copied";
     } catch {
-      // The browser blocked the clipboard. The text is selected, so it can be copied by hand.
+      // The browser blocked the clipboard. A visible field stays selected, so it can be copied by hand.
     }
   });
 }

@@ -2,7 +2,7 @@ import type { Channel } from "../buffer.ts";
 import { type Chorus, isRelay } from "../choruses.ts";
 import { type Html, html } from "../html.ts";
 import { channelProblem } from "../posts.ts";
-import { place, serviceName } from "./labels.ts";
+import { crumbs, place, serviceName } from "./labels.ts";
 
 export function joinPage(
   chorus: Chorus,
@@ -28,7 +28,7 @@ export function joinPage(
   });
 
   return html`<div class="page-head">
-  <a href="/c/${chorus._id}" class="back">${chorus.title}</a>
+  ${crumbs(["/me", "My Choruses"], [`/c/${chorus._id}`, chorus.title])}
   <h1>Pick your channel</h1>
   <p class="muted">${
     isRelay(chorus)

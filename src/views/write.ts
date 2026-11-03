@@ -5,7 +5,7 @@ import { type Html, html } from "../html.ts";
 import type { ChorusImage } from "../images.ts";
 import { MAX_ANSWER, MAX_TEXT, type Post } from "../posts.ts";
 import { imagePicker } from "./images.ts";
-import { place, serviceName, shortName, showDay } from "./labels.ts";
+import { crumbs, place, serviceName, shortName, showDay } from "./labels.ts";
 import { timing } from "./when.ts";
 
 export function checkList(result: CheckResult): Html {
@@ -56,7 +56,7 @@ export function writePage(
   images: ChorusImage[],
 ): Html {
   return html`<div class="page-head">
-  <a href="/c/${chorus._id}" class="back">${chorus.title}</a>
+  ${crumbs(["/me", "My Choruses"], [`/c/${chorus._id}`, chorus.title])}
   <h1>Your post</h1>
 </div>
 ${post.lastError && html`<div class="errors" role="alert"><p>Buffer didn't schedule it: ${post.lastError}</p></div>`}
@@ -115,7 +115,11 @@ export function aiPage(
   const said = (question: string) =>
     answers.find((a) => a.question === question)?.answer ?? "";
   return html`<div class="page-head">
-  <a href="/c/${chorus._id}/post" class="back">Your post</a>
+  ${crumbs(
+    ["/me", "My Choruses"],
+    [`/c/${chorus._id}`, chorus.title],
+    [`/c/${chorus._id}/post`, "Your post"],
+  )}
   <h1>Draft with AI</h1>
   <p class="muted">Answer in a few words or a few lines. The AI writes a ${serviceName(post.channelService)} post from your answers and the facts, and nothing else. You can change all of it after.</p>
 </div>

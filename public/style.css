@@ -2578,6 +2578,57 @@ a.chorus-card.live:hover {
   color: var(--muted);
 }
 
+/* On a phone: the two hero buttons share the row, the steps become cards you swipe (the next one peeks in),
+   and the last call and the footer are centered. */
+@media (max-width: 600px) {
+  .hero-actions .button {
+    flex: 1 1 0;
+    padding: 12px;
+  }
+
+  .steps {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    margin: 0 -16px;
+    padding: 0 16px;
+    scroll-padding: 0 16px;
+    gap: 12px;
+  }
+
+  .steps::-webkit-scrollbar {
+    display: none;
+  }
+
+  .step {
+    flex: 0 0 82%;
+    scroll-snap-align: center;
+    padding: 22px;
+  }
+
+  .step:first-child {
+    scroll-snap-align: start;
+  }
+
+  .step:last-child {
+    scroll-snap-align: end;
+  }
+
+  .cta {
+    flex-direction: column;
+    text-align: center;
+    padding: 28px 20px;
+  }
+
+  .site-footer {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+  }
+}
+
 /* The contact form's field for bots: off screen, so people never see it. */
 .honeypot {
   position: absolute;

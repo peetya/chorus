@@ -889,7 +889,6 @@ input.mono {
 }
 
 .narrow-box {
-  max-width: 640px;
   align-items: flex-start;
 }
 
@@ -988,14 +987,42 @@ input.mono {
   gap: 10px;
 }
 
-.invite-link label {
-  font-weight: 600;
+.invite-link .button {
+  align-self: flex-start;
 }
 
-.invite-link input {
-  flex: 1 1 320px;
-  min-width: 0;
-  background: var(--soft);
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* Two buttons side by side. In the narrow join box, and on a phone, they share the row edge to edge. */
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.join-box .button-row > * {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 600px) {
+  .button-row {
+    flex-wrap: nowrap;
+  }
+
+  .button-row .button {
+    flex: 1 1 0;
+    padding: 12px;
+  }
+
+  .invite-link .button {
+    align-self: stretch;
+  }
 }
 
 /* Picking a channel */
@@ -1004,7 +1031,6 @@ input.mono {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  max-width: 40rem;
 }
 
 .channels fieldset {
@@ -1218,7 +1244,6 @@ form.write textarea {
 /* Review before scheduling */
 
 .review {
-  max-width: 44rem;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -1605,7 +1630,6 @@ a.finished-post:hover {
 }
 
 .account {
-  max-width: 760px;
   display: flex;
   flex-direction: column;
   gap: 24px;

@@ -56,8 +56,10 @@ ${
     const relayWhen = html`On ${showDay(chorus.day)}, ${timing(chorus)}. People get their slot in the order they approve.`;
     if (post) {
       return html`<p class="joined">You're in. Your post goes out from <strong>${post.channelName}</strong> (${serviceName(post.channelService)}). ${relayWhen}</p>
-<a href="/c/${chorus._id}/post" class="button primary big">${post.text ? "Edit your post" : "Write your post"}</a>
-<a href="/c/${chorus._id}/join" class="button">Change channel</a>`;
+<div class="button-row">
+  <a href="/c/${chorus._id}/post" class="button primary big">${post.text ? "Edit your post" : "Write your post"}</a>
+  <a href="/c/${chorus._id}/join" class="button big">Change channel</a>
+</div>`;
     }
     return html`<p class="muted">${relayWhen}</p>
 <a href="/c/${chorus._id}/join" class="button primary big">${isOrganizer ? "Pick your channel to post too" : "Join with Buffer"}</a>
@@ -65,8 +67,10 @@ ${
   }
   if (post) {
     return html`<p class="joined">You're in. Your post goes out from <strong>${post.channelName}</strong> (${serviceName(post.channelService)}) on ${when} ${place(post.channelTz)} time.</p>
-<a href="/c/${chorus._id}/post" class="button primary big">${post.text ? "Edit your post" : "Write your post"}</a>
-<a href="/c/${chorus._id}/join" class="button">Change channel</a>`;
+<div class="button-row">
+  <a href="/c/${chorus._id}/post" class="button primary big">${post.text ? "Edit your post" : "Write your post"}</a>
+  <a href="/c/${chorus._id}/join" class="button big">Change channel</a>
+</div>`;
   }
   return html`<p class="muted">On ${when}, each post goes out at that time in the person's own time zone.</p>
 <a href="/c/${chorus._id}/join" class="button primary big">${isOrganizer ? "Pick your channel to post too" : "Join with Buffer"}</a>
@@ -138,12 +142,10 @@ function dashboard(view: ChorusView): Html {
   ${(view.live || view.over) && html`<a href="/c/${chorus._id}" class="small">${view.live ? "See the live wall" : "See the finished wall"}</a>`}
 </div>
 <section class="invite-link">
-  <label for="invite">Invite link</label>
-  <div class="inline">
-    <input id="invite" type="text" readonly value="${inviteUrl}" class="mono">
-    <button type="button" class="button primary" data-copy="invite">Copy link</button>
-  </div>
+  <h2 class="sub-title">Invite link</h2>
   <span class="hint">Anyone with this link can join with their own Buffer account.</span>
+  <input id="invite" type="hidden" value="${inviteUrl}">
+  <button type="button" class="button primary" data-copy="invite">Copy invite link</button>
 </section>
 <section class="tiles" aria-label="Status">
   <div class="tile ready"><strong>${counts.ready}</strong> ready and scheduled</div>

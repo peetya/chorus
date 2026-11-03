@@ -1,3 +1,5 @@
+import { type Html, html } from "../html.ts";
+
 // Chorus pages are shareable, so other people show as first name and initial: "Péter H.".
 export function shortName(name: string): string {
   const [first, ...rest] = name.trim().split(/\s+/);
@@ -57,4 +59,12 @@ const ORDINALS: Record<string, string> = {
 export function ordinal(n: number): string {
   const rule = new Intl.PluralRules("en", { type: "ordinal" }).select(n);
   return `${n}${ORDINALS[rule] ?? "th"}`;
+}
+
+// The way back up, like "My Choruses / Northwind ships Tally 2.0".
+export function crumbs(...links: [href: string, label: string][]): Html {
+  return html`<nav class="crumbs" aria-label="Breadcrumbs">${links.map(
+    ([href, label], i) =>
+      html`${i > 0 && html`<span aria-hidden="true">/</span>`}<a href="${href}" class="back">${label}</a>`,
+  )}</nav>`;
 }

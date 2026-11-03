@@ -4,6 +4,7 @@ import { readSession, type Session, signOut } from "./auth.ts";
 import {
   ACCOUNT_QUERY,
   type Account,
+  addNote,
   type Channel,
   createPost,
   deletePost,
@@ -869,7 +870,8 @@ pages.post(
     // The image as it is now. Images can't change after the start, so neither can this.
     const image = imageFor(await imagesIn({ chorusId: chorus._id }), post);
     try {
-      const scheduled = await createPost(await getAccessToken(session.userId), {
+      const accessToken = await getAccessToken(session.userId);
+      const scheduled = await createPost(accessToken, {
         channelId: post.channelId,
         service: post.channelService,
         text: post.text ?? "",
@@ -886,6 +888,12 @@ pages.post(
       }
       const mark = asDraft ? markDrafted : markScheduled;
       await mark(post._id, scheduled.id, new Date(scheduled.dueAt));
+      // So the person, or someone on their team, knows where the post came from before deleting it.
+      await addNote(
+        accessToken,
+        scheduled.id,
+        `This post is part of the Chorus "${chorus.title}". To change or withdraw it, open https://${req.get("host")}/c/${chorus._id}`,
+      ).catch((err) => console.error(`Note failed for post ${post._id}:`, err));
     } catch (err) {
       // Known limit: if Buffer created the post but its answer got lost, trying again makes a second
       // post. The status checks on the live wall are where that would show up.

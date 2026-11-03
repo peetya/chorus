@@ -247,3 +247,24 @@ test("a scheduled post can't be edited or moved to another channel", async (t) =
   await post(base, `${path}/join`, cookie, [["channelId", "ch_zsofia_bsky"]]);
   assert.equal((await postOf(path, "ch_zsofia_li"))?.status, "scheduled");
 });
+
+test("the post in Buffer gets a note that links back to the Chorus", async (t) => {
+  const base = await listen(t);
+  const { path, cookie } = await drafted(
+    base,
+    "mock_aiko",
+    "ch_aiko_li",
+    "Tally 2.0 is out today. #TallyLaunch",
+  );
+  await post(base, `${path}/post`, cookie, [
+    ["text", "Tally 2.0 is out today. #TallyLaunch"],
+    ["action", "approve"],
+  ]);
+  await post(base, `${path}/post/approve`, cookie);
+
+  const saved = await postOf(path, "ch_aiko_li");
+  const notes = scheduled.get(saved?.bufferPostId ?? "")?.notes ?? [];
+  assert.equal(notes.length, 1);
+  assert.match(notes[0], /"Northwind ships Tally 2\.0"/);
+  assert.ok(notes[0].endsWith(path));
+});

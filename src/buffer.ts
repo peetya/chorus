@@ -8,7 +8,8 @@ const TOKEN_URL = "https://auth.buffer.com/token";
 const API_URL = "https://api.buffer.com";
 
 // offline_access gives a refresh token, so we can schedule posts on the day without the person.
-const SCOPES = "account:read posts:read posts:write offline_access";
+// notes:write puts a note on each post we schedule, saying where it came from.
+const SCOPES = "account:read posts:read posts:write notes:write offline_access";
 
 export function createPkce() {
   const verifier = randomBytes(32).toString("base64url");
@@ -320,6 +321,30 @@ export async function createPost(
         ok: false,
         message: result.message ?? "Buffer didn't schedule the post.",
       };
+}
+
+// Notes are experimental in Buffer's API, so the caller treats a failure as harmless.
+const CREATE_NOTE = `mutation CreateNote($input: CreateCollaborationNoteInput!) {
+  createCollaborationNote(input: $input) {
+    ... on CreateCollaborationNoteSuccess { edge { node { id } } }
+    ... on MutationError { message }
+  }
+}`;
+
+// A note on the post in Buffer, for the person and their team. Throws when Buffer didn't add it.
+export async function addNote(
+  accessToken: string,
+  postId: string,
+  text: string,
+): Promise<void> {
+  const { createCollaborationNote: result } = await graphql<{
+    createCollaborationNote: { edge?: unknown; message?: string };
+  }>(accessToken, CREATE_NOTE, {
+    input: { subject: { postId }, text, annotations: [] },
+  });
+  if (!result.edge) {
+    throw new Error(`Buffer didn't add the note: ${result.message ?? ""}`);
+  }
 }
 
 export async function deletePost(

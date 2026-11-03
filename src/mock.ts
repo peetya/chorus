@@ -147,6 +147,7 @@ export const scheduled = new Map<
     channelId: string;
     draft: boolean;
     assets: MockAsset[];
+    notes?: string[];
   }
 >();
 
@@ -251,6 +252,22 @@ export function mockGraphql(
     });
     const status = input.saveToDraft ? "draft" : "scheduled";
     return { createPost: { post: { ...post, status } } };
+  }
+  if (operation === "CreateNote") {
+    const { subject, text } = (variables?.input ?? {}) as {
+      subject?: { postId?: string };
+      text?: string;
+    };
+    const known = scheduled.get(subject?.postId ?? "");
+    if (!known || known.owner !== person.id || !text?.trim()) {
+      return { createCollaborationNote: { message: "Post not found" } };
+    }
+    known.notes = [...(known.notes ?? []), text];
+    return {
+      createCollaborationNote: {
+        edge: { node: { id: `mocknote_${randomBytes(6).toString("hex")}` } },
+      },
+    };
   }
   if (operation === "DeletePost") {
     const { id } = (variables?.input ?? {}) as { id?: string };

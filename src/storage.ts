@@ -1,6 +1,6 @@
 // Where image files live. Buffer fetches an image when the post goes out, so in production they go to
-// Vercel Blob, which gives a public https URL. Without BLOB_READ_WRITE_TOKEN (local dev, tests, mock mode)
-// they go to public/uploads, which the local server serves. Buffer can't reach those, so real posts need Blob.
+// Vercel Blob, which gives a public https URL. Without Blob (local dev, tests, mock mode) they go to
+// public/uploads, which the local server serves. Buffer can't reach those, so real posts need Blob.
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { del, list, put } from "@vercel/blob";
@@ -8,11 +8,14 @@ import { isMock } from "./buffer.ts";
 
 const LOCAL_DIR = "public/uploads";
 
+// A store connected on Vercel gets BLOB_STORE_ID, and the SDK signs in with Vercel's OIDC token. Outside
+// Vercel, a read-write token from the store's settings does the same.
 function useBlob(): boolean {
+  if (process.env.BLOB_STORE_ID?.trim()) return true;
   if (process.env.BLOB_READ_WRITE_TOKEN?.trim()) return true;
-  // Vercel's file system is read only, so a missing token there is a setup mistake.
+  // Vercel's file system is read only, so no store there is a setup mistake.
   if (process.env.VERCEL) {
-    throw new Error("BLOB_READ_WRITE_TOKEN is not set. See .env.example.");
+    throw new Error("No Blob store is connected. See .env.example.");
   }
   return false;
 }

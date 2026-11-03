@@ -52,7 +52,8 @@ clock: the tests and `npm run mock-data` move a Chorus's `day` or a post's `dueA
 - `src/posts.ts`: the `posts` collection (one per person in a Chorus), joining, and which channels can't post
 - `src/images.ts`: the organizer's images (up to 4): checked by their bytes, cropped per network around a
   focus point with `sharp`, and which one each person's post gets. `src/storage.ts` saves the files: Vercel
-  Blob with `BLOB_READ_WRITE_TOKEN`, else `public/uploads` (gitignored, mock mode only: Buffer can't reach it)
+  Blob when a store is connected (`BLOB_STORE_ID` on Vercel, or `BLOB_READ_WRITE_TOKEN`), else
+  `public/uploads` (gitignored, mock mode only: Buffer can't reach it)
 - `src/checks.ts`: the free checks on a post (length the way each network counts it, the main hashtag,
   the hashtag limit, "Please avoid", facts that aren't on the fact card, and posts too close to one
   already approved). Only an empty post, a too long one and a too close one block

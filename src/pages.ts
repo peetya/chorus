@@ -468,7 +468,7 @@ pages.post("/images", upload, async (req, res) => {
       .status(400)
       .type("text")
       .send(
-        "Images need BLOB_READ_WRITE_TOKEN: Buffer can't fetch them from this computer.",
+        "Images need a Vercel Blob store: Buffer can't fetch them from this computer.",
       );
   }
   if ((await imagesIn(scope)).length >= MAX_IMAGES) {

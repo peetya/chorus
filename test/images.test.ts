@@ -19,6 +19,7 @@ import {
 process.env.BUFFER_MOCK = "1";
 process.env.SESSION_SECRET = "a".repeat(32);
 process.env.TOKEN_KEY = "b".repeat(32);
+delete process.env.BLOB_STORE_ID;
 delete process.env.BLOB_READ_WRITE_TOKEN;
 // The files land in public/uploads. This test file has its own database, so all its images go at the
 // end, before useTestDb drops it.
@@ -151,7 +152,7 @@ test("an upload is checked by its bytes and its size, and cropped for each netwo
   const local = await upload(base, owner, picture);
   process.env.BUFFER_MOCK = "1";
   assert.equal(local.status, 400);
-  assert.match(await local.text(), /BLOB_READ_WRITE_TOKEN/);
+  assert.match(await local.text(), /Vercel Blob store/);
 
   const path = await startChorus(base, owner, [
     "Four people smiling on a video call",

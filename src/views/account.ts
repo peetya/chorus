@@ -1,5 +1,5 @@
 import { type Html, html } from "../html.ts";
-import { initials, showDay } from "./labels.ts";
+import { showDay } from "./labels.ts";
 
 export type AccountView = {
   name: string; // the full name: this page is only for the person
@@ -14,12 +14,10 @@ export function accountPage(view: AccountView): Html {
     ? `one day after your last Chorus is over, on ${showDay(view.tokensGoOn)}`
     : "a day after you signed in, as you're not in any Chorus";
   return html`<div class="account">
-<h1>Account</h1>
-<section class="box account-who">
-  <span class="avatar big">${initials(view.name)}</span>
-  <span class="account-name"><span class="muted small-label">Signed in with Buffer as</span><br><strong>${view.name}</strong></span>
-  <form method="post" action="/logout"><button type="submit" class="button">Sign out</button></form>
-</section>
+<div class="page-head">
+  <h1>Account</h1>
+  <p class="muted">Signed in with Buffer as <strong>${view.name}</strong></p>
+</div>
 <section class="box">
   <div class="title-row">
     <h2 class="sub-title">Buffer connection</h2>
@@ -27,16 +25,12 @@ export function accountPage(view: AccountView): Html {
   </div>
   ${
     view.connected
-      ? html`<p class="muted">Chorus uses it to schedule the posts you approve and to check when they go out. It's deleted ${when}.</p>
+      ? html`<p class="muted">Chorus uses it to schedule the posts you approve and to check when they go out. It's deleted ${when}. To end it sooner, remove Chorus in your Buffer settings.</p>
   <ul>
     <li>See your channels</li>
     <li>Create and remove the posts you approve</li>
     <li>Check whether they went out</li>
-  </ul>
-  <form method="post" action="/account/disconnect" class="actions inline">
-    <button type="submit" class="button">Disconnect now</button>
-    <span class="hint">Posts already in your Buffer queue still go out. You can also remove Chorus in your Buffer settings.</span>
-  </form>`
+  </ul>`
       : html`<p class="muted">Chorus can't schedule or check posts for you now. Sign in again to connect it.</p>
   <a href="/login/buffer?next=/account" class="button primary">Sign in with Buffer</a>`
   }

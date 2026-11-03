@@ -80,7 +80,7 @@ export async function namesOf(userIds: string[]): Promise<Map<string, string>> {
   return new Map(found.map((user) => [user._id, user.name]));
 }
 
-// The tokens are gone: disconnected, cleaned up, or refused by Buffer. The person signs in again.
+// The tokens are gone: cleaned up, or refused by Buffer. The person signs in again.
 export class NotConnectedError extends Error {}
 
 export async function dropTokens(userId: string) {

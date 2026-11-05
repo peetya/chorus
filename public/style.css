@@ -1909,6 +1909,27 @@ a.finished-post:hover {
   padding: 12px 14px;
 }
 
+.own-image {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.own-image .errors {
+  margin: 0;
+}
+
+.own-image .too-big {
+  color: var(--error);
+}
+
+.own-image [hidden] {
+  display: none;
+}
+
 .review-image {
   margin: 0;
   display: flex;

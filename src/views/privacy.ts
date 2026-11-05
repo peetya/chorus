@@ -12,7 +12,7 @@ export function privacyPage(): Html {
 <h2 class="sub-title">What Chorus keeps</h2>
 <ul>
   <li>When you sign in with Buffer: your Buffer account's id and name, and the keys that let Chorus schedule your post (Buffer's access and refresh tokens, encrypted with AES-256-GCM).</li>
-  <li>When you join a Chorus: the channel you picked (its name, network and time zone), your post, and whether it went out. If you use "Draft with AI", your answers to the questions too.</li>
+  <li>When you join a Chorus: the channel you picked (its name, network and time zone), your post, the image you add to it, and whether it went out. If you use "Draft with AI", your answers to the questions too.</li>
   <li>When you start a Chorus: the brief you write and the images you upload.</li>
   <li>When you use the contact form: your email and your message.</li>
 </ul>

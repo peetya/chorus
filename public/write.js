@@ -25,6 +25,14 @@ form.elements.text.addEventListener("input", () => {
   timer = setTimeout(check, 300);
 });
 
+// Vercel refuses a body over 4.5 MB before Chorus sees it, and the text sent with it would be lost.
+const ownFile = form.querySelector("[data-own-file]");
+ownFile?.addEventListener("change", () => {
+  const note = form.querySelector("[data-own-too-big]");
+  note.hidden = !(ownFile.files[0]?.size > 4 * 1024 * 1024);
+  if (!note.hidden) ownFile.value = "";
+});
+
 // The image picker: shows the crop of the picked image, or the "No image" note.
 for (const radio of form.querySelectorAll("[name=image]")) {
   radio.addEventListener("change", () => {

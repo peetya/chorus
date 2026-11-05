@@ -62,6 +62,7 @@ export function reviewPage(
   result: CheckResult,
   images: ChorusImage[],
   slot?: number | null,
+  own: ChorusImage | null = null,
 ): Html {
   const full = slot === null;
   const blocked =
@@ -78,7 +79,7 @@ export function reviewPage(
 </div>
 <div class="review">
   <div class="review-post">${post.text ?? ""}</div>
-  ${reviewImage(images, post)}
+  ${reviewImage(images, post, own)}
   <div data-results>
 ${checkList(result)}
   </div>

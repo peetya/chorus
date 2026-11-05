@@ -45,7 +45,10 @@ export async function deleteUserData(userId: string) {
     .find({ ownerId: userId }, { projection: { _id: 1 } })
     .toArray();
   const ownedIds = owned.map((chorus) => chorus._id);
-  await deleteImages({ ownerId: userId });
+  // Their own images, and every image in the Choruses they organize, other people's own ones too.
+  await deleteImages({
+    $or: [{ ownerId: userId }, { chorusId: { $in: ownedIds } }],
+  });
   await (await posts()).deleteMany({
     $or: [{ userId }, { chorusId: { $in: ownedIds } }],
   });

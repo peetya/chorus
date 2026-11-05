@@ -50,8 +50,9 @@ clock: the tests and `npm run mock-data` move a Chorus's `day` or a post's `dueA
 - `src/auth.ts`: sign in (also as a fake person in mock mode), sign out, `readSession()`
 - `src/choruses.ts`: the `choruses` collection, and reading and checking the "Start a Chorus" form
 - `src/posts.ts`: the `posts` collection (one per person in a Chorus), joining, and which channels can't post
-- `src/images.ts`: the organizer's images (up to 4): checked by their bytes, cropped per network around a
-  focus point with `sharp`, and which one each person's post gets. `src/storage.ts` saves the files: Vercel
+- `src/images.ts`: the organizer's images (up to 4) and each person's own image for their post (one, with
+  a `postId`): checked by their bytes, cropped per network around a focus point with `sharp`, and which one
+  each post gets. LinkedIn gets the whole image when it fits 3:1 to 4:5. `src/storage.ts` saves the files: Vercel
   Blob when a store is connected (`BLOB_STORE_ID` on Vercel, or `BLOB_READ_WRITE_TOKEN`), else
   `public/uploads` (gitignored, mock mode only: Buffer can't reach it)
 - `src/checks.ts`: the free checks on a post (length the way each network counts it, the main hashtag,
@@ -66,7 +67,7 @@ clock: the tests and `npm run mock-data` move a Chorus's `day` or a post's `dueA
 - `src/pages.ts`: the routes for the landing page (`/`), My Choruses (`/me`), the account page (`/account`),
   Start a Chorus (`/new`) and its images (`/images`), the Chorus page (`/c/:id`) and its live wall
   (`/c/:id/wall`), joining it (`/c/:id/join`), writing your post (`/c/:id/post`, with `/post/check` for
-  the checks while you type and `/post/ai`), and reviewing, approving or withdrawing it (`/post/review`,
+  the checks while you type, `/post/ai`, and `/post/image` for the person's own image), and reviewing, approving or withdrawing it (`/post/review`,
   `/post/approve`, `/post/withdraw`)
 - A post moves drafting, scheduling, scheduled (and withdrawing, back to drafting) with one atomic
   `findOneAndUpdate` per step in `src/posts.ts`, so a double click can't create two Buffer posts
@@ -80,7 +81,7 @@ clock: the tests and `npm run mock-data` move a Chorus's `day` or a post's `dueA
   from here so no page asks Google for them, with their OFL licenses), the logo, and
   `brief.js` (list rows and the live fact card on the form), `copy.js` (the invite link's copy button), `write.js` (sends the text to
   `/c/:id/post/check` while you type; the checks run only on the server, so they live in one place, and
-  swaps the image preview), `new-images.js` (uploads images on "Start a Chorus" as they are picked),
+  swaps the image preview, and stops an own image over 4 MB before it's sent), `new-images.js` (uploads images on "Start a Chorus" as they are picked),
   `focus.js` (dragging an image's crosshair moves its focus point and swaps in the new crops),
   `ai.js` (shows the AI is working and stops a second send), `review.js` (offers the browser's time zone
   when Buffer's is London), `wall.js` (refreshes the live wall and its map every minute),

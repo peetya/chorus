@@ -42,8 +42,9 @@ export type Post = {
   aiUses?: number;
   statusChecks: number;
   // Which of the Chorus's images, counted round them (see imageFor). It starts as the number of people
-  // who joined before, so the images spread across the group. null is "No image".
-  imageIndex?: number | null;
+  // who joined before, so the images spread across the group. null is "No image", "own" the person's
+  // own image.
+  imageIndex?: number | null | "own";
   joinedAt: Date;
   relaySlot?: number; // a relay's place in line, from 0, taken when the person approves
 };
@@ -99,7 +100,7 @@ export async function saveText(
   chorusId: string,
   userId: string,
   text: string,
-  imageIndex?: number | null,
+  imageIndex?: Post["imageIndex"],
 ): Promise<boolean> {
   const { matchedCount } = await (await posts()).updateOne(
     { chorusId, userId, status: "drafting" },

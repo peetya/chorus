@@ -26,6 +26,24 @@ export type ChorusView = {
   inviteUrl: string;
 };
 
+// For search results and shared links. The invite page shows the same: who invites, when, and how.
+export function chorusSummary({
+  chorus,
+  organizer,
+  joined,
+  over,
+}: ChorusView): string {
+  if (over) {
+    const sent = joined.filter(({ post }) => post.status === "sent").length;
+    if (sent === 0) return `A Chorus by ${shortName(organizer)}.`;
+    return `${sent === 1 ? "One person" : `${sent} people`} posted about it together, each in their own words.`;
+  }
+  const how = isRelay(chorus)
+    ? "one after another through the day"
+    : `at ${chorus.localTime} in your own time zone`;
+  return `${shortName(organizer)} invites you to post about it together on ${showDay(chorus.day)}, each in your own words, ${how}.`;
+}
+
 export function joinBox({ chorus, post, over, isOrganizer }: ChorusView): Html {
   const when = html`${showDay(chorus.day)}, at ${chorus.localTime}`;
   if (post?.status === "scheduled" && post.dueAt) {

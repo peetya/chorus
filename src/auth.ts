@@ -66,7 +66,13 @@ auth.get("/login", async (req, res) => {
   if (readSession(req)) return res.redirect(next);
   const invite = next.match(/^\/c\/([\w-]+)\/join$/);
   const joining = invite ? await getChorus(invite[1]) : null;
-  res.send(page("Sign in", signInPage(next, joining), { signingIn: true }));
+  res.send(
+    page("Sign in", signInPage(next, joining), {
+      signingIn: true,
+      description: "Sign in to Chorus with your Buffer account.",
+      index: true,
+    }),
+  );
 });
 
 auth.get("/login/buffer", (req, res) => {

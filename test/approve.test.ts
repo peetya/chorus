@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { addDays } from "../src/choruses.ts";
-import { scheduled } from "../src/mock.ts";
+import { rateLimit, scheduled } from "../src/mock.ts";
 import { posts } from "../src/posts.ts";
 import { localTime } from "../src/time.ts";
 import {
@@ -143,6 +143,28 @@ test("when Buffer refuses, the post is a draft again with Buffer's reason", asyn
     await fetch(`${base}${path}/post`, { headers: { cookie } })
   ).text();
   assert.match(editor, /Buffer didn't schedule it: Channel not found/);
+});
+
+test("over Buffer's rate limit, the post stays a draft and the page says when to try again", async (t) => {
+  const base = await listen(t);
+  const { path, cookie } = await drafted(
+    base,
+    "mock_aiko",
+    "ch_aiko_li",
+    "Out today, and I like it. #TallyLaunch",
+  );
+  rateLimit.retryAfter = 600;
+  t.after(() => {
+    rateLimit.retryAfter = 0;
+  });
+  const res = await post(base, `${path}/post/approve`, cookie);
+  assert.equal(res.status, 503);
+  const page = await res.text();
+  assert.match(page, /Buffer is busy right now/);
+  assert.match(page, /try again in about 10 minutes/);
+  const saved = await postOf(path, "ch_aiko_li");
+  assert.equal(saved?.status, "drafting");
+  assert.equal(saved?.bufferPostId, undefined);
 });
 
 test("withdrawing takes it out of Buffer and keeps the text, but not at the last minute", async (t) => {

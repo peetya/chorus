@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import express, { type ErrorRequestHandler } from "express";
 import { auth } from "./auth.ts";
+import { BufferApiError } from "./buffer.ts";
 import { dailyCleanup } from "./cleanup.ts";
 import { html, page } from "./html.ts";
 import { pages } from "./pages.ts";
@@ -77,6 +78,22 @@ const onError: ErrorRequestHandler = (err, _req, res, next) => {
         html`<h1>Sign in again</h1>
 <p>Chorus isn't connected to your Buffer account anymore. Sign in again, and you can go on where you were.</p>
 <p><a href="/login/buffer" class="button primary">Sign in with Buffer</a></p>`,
+      ),
+    );
+  }
+  // Buffer counts calls per app, so this hits everyone at once. Posts already in Buffer still go out.
+  if (err instanceof BufferApiError && err.code === "RATE_LIMIT_EXCEEDED") {
+    console.error(
+      JSON.stringify({ event: "rate_limited", message: err.message }),
+    );
+    const minutes = Math.max(1, Math.ceil((err.retryAfter ?? 900) / 60));
+    return res.status(503).send(
+      page(
+        "Buffer is busy",
+        html`<h1>Buffer is busy right now</h1>
+<p>Chorus made a lot of calls to Buffer in a short time, so it has to wait a bit. Please try again in about ${minutes === 1 ? "a minute" : `${minutes} minutes`}.</p>
+<p>What you saved is still here, and posts already in Buffer go out on time.</p>
+<p><a href="/">Back to the start</a></p>`,
       ),
     );
   }

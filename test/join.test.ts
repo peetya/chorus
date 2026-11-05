@@ -48,6 +48,25 @@ test("only our own Chorus pages are allowed after sign-in", () => {
   assert.equal(safeNext(undefined), "/me");
 });
 
+test("the organizer's note keeps its line breaks", async (t) => {
+  const base = await listen(t);
+  const cookie = await mockSession(base, "mock_zsofia");
+  await finishOpenChoruses();
+  const res = await post(base, "/new", cookie, [
+    ["title", "Northwind ships Tally 2.0"],
+    ["note", "Hi everyone!\nThanks for joining."],
+    ["facts", "Tally 2.0 is out today."],
+    ["hashtags", "#TallyLaunch"],
+    ["questions", "What do you like most?"],
+    ["day", addDays(14)],
+    ["localTime", "09:00"],
+  ]);
+  const html = await (
+    await fetch(`${base}${res.headers.get("location")}`)
+  ).text();
+  assert.match(html, /class="note-text">Hi everyone!\nThanks for joining\.</);
+});
+
 test("anyone with the link sees the invite", async (t) => {
   const base = await listen(t);
   const path = await startChorus(base);

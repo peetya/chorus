@@ -194,7 +194,7 @@ export function chorusPage(view: ChorusView): Html {
   <span class="pill accent">${showDay(chorus.day)} · ${isRelay(chorus) ? `relay from ${chorus.localTime} ${place(chorus.relayTz)} time` : `${chorus.localTime} your time`}</span>
   ${
     chorus.note &&
-    html`<figure class="note"><span class="avatar">${initials(organizer)}</span><blockquote>${chorus.note}</blockquote></figure>`
+    html`<figure class="note"><span class="avatar">${initials(organizer)}</span><blockquote class="note-text">${chorus.note}</blockquote></figure>`
   }
   <div class="brief-cards">
     <div class="box">

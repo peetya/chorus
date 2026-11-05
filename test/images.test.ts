@@ -4,7 +4,13 @@ import { after, test } from "node:test";
 import sharp from "sharp";
 import { addDays, choruses } from "../src/choruses.ts";
 import { dailyCleanup, deleteUserData } from "../src/cleanup.ts";
-import { cropBox, deleteImages, images, imagesIn } from "../src/images.ts";
+import {
+  cropBox,
+  cropFor,
+  deleteImages,
+  images,
+  imagesIn,
+} from "../src/images.ts";
 import { scheduled } from "../src/mock.ts";
 import { findPost, posts } from "../src/posts.ts";
 import { readSaved } from "../src/storage.ts";
@@ -121,6 +127,53 @@ test("the crop box keeps the focus in view, inside the image", () => {
   const tall = cropBox(1000, 2000, { x: 0.5, y: 0.1 }, 1.91);
   assert.equal(tall.top, 0);
   assert.equal(tall.width, 1000);
+});
+
+test("LinkedIn gets the whole image when it fits LinkedIn's 3:1 to 4:5, and a crop when it doesn't", () => {
+  const shape = (width: number, height: number) => ({ width, height });
+  assert.equal(cropFor("linkedin", shape(1080, 1350)), "original");
+  assert.equal(cropFor("linkedin", shape(1638, 2048)), "original");
+  assert.equal(cropFor("linkedin", shape(1200, 1200)), "original");
+  assert.equal(cropFor("linkedin", shape(3000, 1000)), "original");
+  assert.equal(cropFor("linkedin", shape(1000, 2000)), "portrait");
+  assert.equal(cropFor("linkedin", shape(2000, 500)), "linkedin");
+  // The other networks don't depend on the shape.
+  assert.equal(cropFor("twitter", shape(1080, 1350)), "wide");
+  assert.equal(cropFor("bluesky", shape(1080, 1350)), "wide");
+  assert.equal(cropFor("instagram", shape(2000, 500)), "portrait");
+  assert.equal(cropFor("threads", shape(2000, 500)), "original");
+});
+
+test("a portrait image goes to LinkedIn whole, and the pages say so", async (t) => {
+  const base = await listen(t);
+  await finishOpenChoruses();
+  const owner = await mockSession(base, "mock_zsofia");
+  const card = await (
+    await upload(base, owner, await halves(1600, 2000))
+  ).text();
+  assert.match(card, /LinkedIn · whole image/);
+  assert.match(card, /X · 16:9/);
+  assert.match(card, /Instagram · 4:5/);
+  const created = await post(base, "/new", owner, [
+    ...BRIEF(),
+    [`alt-${idOf(card)}`, "A tall poster"],
+  ]);
+  const path = created.headers.get("location") ?? "";
+  const [image] = await imagesOf(path);
+  const aiko = await mockSession(base, "mock_aiko");
+  await post(base, `${path}/join`, aiko, [["channelId", "ch_aiko_li"]]);
+  await post(base, `${path}/post`, aiko, [["text", "Out today. #TallyLaunch"]]);
+  const editor = await (
+    await fetch(`${base}${path}/post`, { headers: { cookie: aiko } })
+  ).text();
+  assert.match(editor, /LinkedIn gets the whole image/);
+  await post(base, `${path}/post/approve`, aiko);
+  const sent = await (await posts()).findOne({
+    chorusId: path.slice(3),
+    channelId: "ch_aiko_li",
+  });
+  const assets = scheduled.get(sent?.bufferPostId ?? "")?.assets;
+  assert.equal(assets?.[0]?.image.url, image.urls.original);
 });
 
 test("an upload is checked by its bytes and its size, and cropped for each network", async (t) => {

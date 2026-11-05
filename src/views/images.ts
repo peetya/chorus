@@ -11,11 +11,11 @@ import {
 import type { Post } from "../posts.ts";
 import { serviceName, shortName } from "./labels.ts";
 
-const CROP_LABELS: [Crop, string][] = [
-  ["linkedin", "LinkedIn · 1.91:1"],
-  ["wide", "X · 16:9"],
-  ["wide", "Bluesky · 16:9"],
-  ["portrait", "Instagram · 4:5"],
+const CROP_LABELS: [string, string][] = [
+  ["linkedin", "LinkedIn"],
+  ["twitter", "X"],
+  ["bluesky", "Bluesky"],
+  ["instagram", "Instagram"],
 ];
 
 const RATIOS: Partial<Record<Crop, string>> = {
@@ -36,12 +36,13 @@ function focusPick(image: ChorusImage): Html {
 
 function crops(image: ChorusImage): Html {
   return html`<div class="crops">
-    <span class="small-label">Cropped for each network</span>
+    <span class="small-label">How each network gets it</span>
     <div>
-    ${CROP_LABELS.map(
-      ([crop, label]) =>
-        html`<figure><button type="button" class="crop-open" data-crop-open aria-label="Show the ${label} crop larger"><img src="${image.urls[crop]}" alt="" data-crop="${crop}"></button><figcaption>${label}</figcaption></figure>`,
-    )}
+    ${CROP_LABELS.map(([service, network]) => {
+      const crop = cropFor(service, image);
+      const label = `${network} · ${RATIOS[crop] ?? "whole image"}`;
+      return html`<figure><button type="button" class="crop-open" data-crop-open aria-label="Show the ${label} crop larger"><img src="${image.urls[crop]}" alt="" data-crop="${crop}"></button><figcaption>${label}</figcaption></figure>`;
+    })}
     </div>
   </div>`;
 }
@@ -82,8 +83,12 @@ ${images.map(formImageCard)}
 </fieldset>`;
 }
 
-function previewHint(service: string, organizer: string): string {
-  const ratio = RATIOS[cropFor(service)];
+function previewHint(
+  service: string,
+  image: ChorusImage,
+  organizer: string,
+): string {
+  const ratio = RATIOS[cropFor(service, image)];
   if (!ratio) return `${serviceName(service)} gets the whole image.`;
   return `Cropped to ${ratio} for ${serviceName(service)}. Chorus keeps the spot ${shortName(organizer)} marked in view.`;
 }
@@ -97,7 +102,6 @@ export function imagePicker(
 ): Html | false {
   if (images.length === 0) return false;
   const current = imageFor(images, post);
-  const crop = cropFor(post.channelService);
   const network = serviceName(post.channelService);
   const required = needsImage(post.channelService);
   const choice =
@@ -129,10 +133,13 @@ export function imagePicker(
       <span class="small-label">How it looks on ${network}</span>
       ${images.map(
         (image, i) =>
-          html`<img src="${image.urls[crop]}" alt="" data-preview="${i}"${image !== current && " hidden"}>`,
+          html`<img src="${image.urls[cropFor(post.channelService, image)]}" alt="" data-preview="${i}"${image !== current && " hidden"}>`,
       )}
       <p class="no-image-note" data-preview="none"${current !== null && " hidden"}>No image. The post goes out with your text only.</p>
-      <span class="hint">${previewHint(post.channelService, organizer)}</span>
+      ${images.map(
+        (image, i) =>
+          html`<span class="hint" data-preview="${i}"${image !== current && " hidden"}>${previewHint(post.channelService, image, organizer)}</span>`,
+      )}
     </div>
   </div>
 </fieldset>`;
@@ -144,7 +151,7 @@ export function reviewImage(images: ChorusImage[], post: Post): Html | null {
   return (
     image &&
     html`<figure class="review-image">
-  <img src="${image.urls[cropFor(post.channelService)]}" alt="${image.alt}">
+  <img src="${image.urls[cropFor(post.channelService, image)]}" alt="${image.alt}">
   <figcaption class="hint">With the image you picked. Its description: ${image.alt}</figcaption>
 </figure>`
   );

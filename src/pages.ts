@@ -872,7 +872,10 @@ pages.post(
         aiAssisted: post.aiShaped,
         saveToDraft: asDraft,
         image: image
-          ? { url: image.urls[cropFor(post.channelService)], alt: image.alt }
+          ? {
+              url: image.urls[cropFor(post.channelService, image)],
+              alt: image.alt,
+            }
           : undefined,
       });
       if (!scheduled.ok) {

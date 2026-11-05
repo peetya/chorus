@@ -1,0 +1,74 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { cookieFrom, listen, mockSession, useTestDb } from "./server.ts";
+
+process.env.BUFFER_MOCK = "1";
+process.env.SESSION_SECRET = "a".repeat(32);
+process.env.TOKEN_KEY = "b".repeat(32);
+useTestDb();
+
+function signInAs(base: string, person: string) {
+  return fetch(`${base}/login/mock`, {
+    method: "POST",
+    body: new URLSearchParams({ person }),
+    redirect: "manual",
+  });
+}
+
+test("login lists the fake people instead of going to Buffer", async (t) => {
+  const base = await listen(t);
+  const res = await fetch(`${base}/login/buffer`, { redirect: "manual" });
+
+  assert.equal(res.status, 200);
+  assert.match(await res.text(), /Aiko Tanaka, Tokyo/);
+});
+
+test("signing in as a fake person opens their page", async (t) => {
+  const base = await listen(t);
+  const login = await signInAs(base, "mock_aiko");
+  assert.equal(login.status, 302);
+  assert.equal(login.headers.get("location"), "/me");
+
+  const cookie = cookieFrom(login, "chorus_session").split(";")[0];
+  const me = await fetch(`${base}/me`, { headers: { cookie } });
+  const text = await me.text();
+  assert.match(text, /My Choruses/);
+  assert.match(text, /Aiko Tanaka \(mock mode\)/);
+});
+
+test("sign in while signed in goes straight to My Choruses", async (t) => {
+  const base = await listen(t);
+  const cookie = await mockSession(base, "mock_ravi");
+  const res = await fetch(`${base}/login`, {
+    headers: { cookie },
+    redirect: "manual",
+  });
+  assert.equal(res.headers.get("location"), "/me");
+});
+
+test("the landing page's header knows who is signed in", async (t) => {
+  const base = await listen(t);
+  const out = await (await fetch(base)).text();
+  assert.match(out, /Announce it together/);
+  assert.match(out, /href="\/login">Sign in/);
+
+  const cookie = await mockSession(base, "mock_ravi");
+  const signedIn = await (await fetch(base, { headers: { cookie } })).text();
+  assert.match(signedIn, /My Choruses/);
+  assert.match(signedIn, /class="avatar menu-avatar"[^>]*>RK</);
+  assert.doesNotMatch(signedIn, /href="\/login"/);
+});
+
+test("someone not on the list can't sign in", async (t) => {
+  const base = await listen(t);
+  const res = await signInAs(base, "mock_nobody");
+  assert.equal(res.status, 400);
+});
+
+test("mock mode refuses to run on a deployment", async (t) => {
+  process.env.VERCEL = "1";
+  t.after(() => delete process.env.VERCEL);
+  const base = await listen(t);
+  const res = await fetch(`${base}/login/buffer`);
+  assert.equal(res.status, 500);
+});

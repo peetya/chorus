@@ -1,0 +1,104 @@
+import type { CheckResult } from "../checks.ts";
+import { type Chorus, isRelay, relaySlots } from "../choruses.ts";
+import { type Html, html } from "../html.ts";
+import type { ChorusImage } from "../images.ts";
+import type { Post } from "../posts.ts";
+import {
+  LATE_MINUTES,
+  localTime,
+  RELAY_END,
+  SPREAD_MINUTES,
+  zonedToUtc,
+} from "../time.ts";
+import { reviewImage } from "./images.ts";
+import { ordinal, place, serviceName, showDay } from "./labels.ts";
+import { clockAt } from "./when.ts";
+import { checkList } from "./write.ts";
+
+// Every zone the server knows, plus the channel's own: Node's list has some old names ("Asia/Calcutta"),
+// and Buffer may send the new one ("Asia/Kolkata").
+function zoneOptions(current: string): Html[] {
+  const zones = new Set([...Intl.supportedValuesOf("timeZone"), current]);
+  return [...zones]
+    .sort()
+    .map(
+      (zone) =>
+        html`<option value="${zone}"${zone === current && " selected"}>${zone.replaceAll("_", " ")}</option>`,
+    );
+}
+
+// Buffer says London for London, and also for a channel with no time zone set. Then we ask.
+function zoneField(post: Post): Html {
+  const unsure = post.channelTz === "Europe/London" && !post.tzConfirmed;
+  return html`<div class="field">
+  <label for="tz">Your time zone</label>
+  <select id="tz" name="tz"${unsure && " data-tz-guess"}>${zoneOptions(post.channelTz)}</select>
+  <span class="hint">${
+    unsure
+      ? "Buffer says London. It also says London when a channel has no time zone set, so check this one."
+      : "From your channel in Buffer. Change it if it's wrong."
+  }</span>
+</div>`;
+}
+
+// When a wave post goes out: the person's own time, or a few minutes after approving when that has passed.
+function waveWhen(chorus: Chorus, post: Post): Html {
+  const planned = zonedToUtc(
+    chorus.day,
+    chorus.localTime,
+    post.channelTz,
+  ).getTime();
+  const late = planned < Date.now() + LATE_MINUTES * 60_000;
+  return late
+    ? html`<p>Your ${chorus.localTime} on ${showDay(chorus.day)} has passed in ${place(post.channelTz)}, so it goes out a few minutes after you schedule it, from ${post.channelName} (${serviceName(post.channelService)}).</p>`
+    : html`<p>It goes out on <strong>${showDay(chorus.day)}</strong>, between <strong>${chorus.localTime}</strong> and <strong>${localTime(new Date(planned + SPREAD_MINUTES * 60_000), post.channelTz)}</strong> in your time zone, from ${post.channelName} (${serviceName(post.channelService)}).</p>`;
+}
+
+// One last look before Buffer gets it: the post, the checks, and when it goes out. slot is the relay slot
+// the person would get now (null when the relay is full), and undefined in a wave.
+export function reviewPage(
+  chorus: Chorus,
+  post: Post,
+  result: CheckResult,
+  images: ChorusImage[],
+  slot?: number | null,
+): Html {
+  const full = slot === null;
+  const blocked =
+    full || result.checks.some((check) => check.level === "block");
+  let when = waveWhen(chorus, post);
+  if (isRelay(chorus) && slot != null) {
+    const at = relaySlots(chorus)[slot];
+    when = html`<p>Your post goes out at <strong>${clockAt(at, chorus.relayTz, `${place(chorus.relayTz)} time`)}</strong> on ${showDay(chorus.day)}, ${ordinal(slot + 1)} in line, from ${post.channelName} (${serviceName(post.channelService)}). If someone else approves just before you, you get the next free slot.</p>`;
+  }
+  return html`<div class="page-head">
+  <a href="/c/${chorus._id}/post" class="back">Back to editing</a>
+  <h1>Check it before it's scheduled</h1>
+  <p class="muted">Read it once more against the brief. Warnings are fine if you're sure.</p>
+</div>
+<div class="review">
+  <div class="review-post">${post.text ?? ""}</div>
+  ${reviewImage(images, post)}
+  <div data-results>
+${checkList(result)}
+  </div>
+  ${!full && when}
+  ${
+    full
+      ? html`<p class="errors" role="alert">This relay is full. Every slot before ${RELAY_END} is taken or has already passed, so there's no place left for your post. Your text stays saved here.</p>
+<div class="actions inline"><a href="/c/${chorus._id}" class="button primary">Back to the Chorus</a></div>`
+      : blocked
+        ? html`<p class="errors" role="alert">Fix the marked problem first, then come back here.</p>
+<div class="actions inline"><a href="/c/${chorus._id}/post" class="button primary">Back to editing</a></div>`
+        : html`<form method="post" action="/c/${chorus._id}/post/approve" class="review-form">
+  ${!isRelay(chorus) && zoneField(post)}
+  <div class="actions inline">
+    <button type="submit" class="button primary">Schedule it in Buffer</button>
+    <button type="submit" name="as" value="draft" class="button">Save to my Buffer drafts instead</button>
+    <a href="/c/${chorus._id}/post" class="link">Back to editing</a>
+  </div>
+  <span class="hint">A draft isn't published. Schedule or post it from Buffer when you're ready, and this Chorus follows what you do there.</span>
+</form>`
+  }
+</div>`;
+}

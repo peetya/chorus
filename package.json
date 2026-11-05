@@ -1,0 +1,34 @@
+{
+  "name": "chorus",
+  "private": true,
+  "type": "module",
+  "description": "Announce news together: everyone writes their own post, and it goes out from their own Buffer account",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=.env src/dev.ts",
+    "cert": "mkdir -p .cert && mkcert -key-file .cert/key.pem -cert-file .cert/cert.pem localhost",
+    "db": "docker compose up -d",
+    "db:stop": "docker compose stop",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "mock-data": "node --env-file-if-exists=.env scripts/mock-data.ts"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.8.2",
+    "express": "^5.3.0",
+    "mongodb": "^7.7.0",
+    "openai": "^7.47.0",
+    "sharp": "^0.35.5"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "@types/express": "5.0.6",
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2"
+  }
+}

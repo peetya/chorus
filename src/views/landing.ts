@@ -1,4 +1,10 @@
-import { accountNav, html, type PageOptions } from "../html.ts";
+import {
+  accountNav,
+  DESCRIPTION,
+  headTags,
+  html,
+  type PageOptions,
+} from "../html.ts";
 
 // The landing page has its own head (the description, landing.js) and the dark hero around the header, so it
 // doesn't use page(). It's rendered here, not served from public/, so the header knows who is signed in.
@@ -8,8 +14,7 @@ export function landingPage(viewer: PageOptions["viewer"]): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Chorus</title>
-  <meta name="description" content="Announce news together. Everyone writes their own post, and it goes out from their own account.">
+  ${headTags("Chorus: announce it together, each in your own words", DESCRIPTION, true)}
   <link rel="icon" href="/logo.svg" type="image/svg+xml">
   <link rel="preload" href="/fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin>

@@ -72,7 +72,9 @@ clock: the tests and `npm run mock-data` move a Chorus's `day` or a post's `dueA
 - A post moves drafting, scheduling, scheduled (and withdrawing, back to drafting) with one atomic
   `findOneAndUpdate` per step in `src/posts.ts`, so a double click can't create two Buffer posts
 - `src/session.ts`, `src/crypto.ts`: sealed (AES-256-GCM) cookies
-- `src/html.ts`: `page()` (with the header), and the `html` tagged template that escapes every value
+- `src/html.ts`: `page()` (with the header, the title, the description and the card for shared links), and
+  the `html` tagged template that escapes every value. Only public pages go in search results; a Chorus and
+  a person's own pages get `noindex`. `public/share.png` is the shared link's image
 - `src/views/`: the markup of each screen, as functions that return `html`. `labels.ts` has the small
   formatters (short names like "Péter H.", network names, days). Routes stay in `pages.ts` and
   `auth.ts` and hold no markup

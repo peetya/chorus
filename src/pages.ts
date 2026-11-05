@@ -83,7 +83,12 @@ import { bufferCanFetch } from "./storage.ts";
 import { waveDueAt } from "./time.ts";
 import { getAccessToken, getUser, namesOf } from "./users.ts";
 import { accountPage, deletedPage } from "./views/account.ts";
-import { type ChorusView, chorusNotFound, chorusPage } from "./views/chorus.ts";
+import {
+  type ChorusView,
+  chorusNotFound,
+  chorusPage,
+  chorusSummary,
+} from "./views/chorus.ts";
 import { contactPage, sentPage, tooManyPage } from "./views/contact.ts";
 import { formImageCard } from "./views/images.ts";
 import { joinPage } from "./views/join.ts";
@@ -139,7 +144,11 @@ pages.get("/", (req, res) => {
 pages.get("/contact", (req, res) => {
   const session = readSession(req);
   res.send(
-    page("Contact", contactPage(), { viewer: session && viewer(session) }),
+    page("Contact", contactPage(), {
+      viewer: session && viewer(session),
+      description: "Write to the person who makes Chorus.",
+      index: true,
+    }),
   );
 });
 
@@ -168,7 +177,12 @@ pages.post(
 pages.get("/privacy", (req, res) => {
   const session = readSession(req);
   res.send(
-    page("Privacy", privacyPage(), { viewer: session && viewer(session) }),
+    page("Privacy", privacyPage(), {
+      viewer: session && viewer(session),
+      description:
+        "What Chorus keeps about you, for how long, and who else sees it.",
+      index: true,
+    }),
   );
 });
 
@@ -395,6 +409,7 @@ pages.get("/c/:id", async (req, res) => {
     return res.send(
       page(chorus.title, finished(view), {
         viewer: session && viewer(session),
+        description: chorusSummary(view),
         // Confetti, and the map or sun path drawing itself, only when something went out.
         script: view.joined.some(({ post }) => post.status === "sent")
           ? ["copy.js", "confetti.js", "intro.js"]
@@ -407,6 +422,7 @@ pages.get("/c/:id", async (req, res) => {
   res.send(
     page(chorus.title, wall ? livePage(view) : chorusPage(view), {
       viewer: session && viewer(session),
+      description: chorusSummary(view),
       script: wall ? "wall.js" : isOrganizer ? "copy.js" : undefined,
     }),
   );

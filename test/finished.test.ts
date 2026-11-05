@@ -100,7 +100,11 @@ test("after the day the wall is a public record with links to the real posts", a
   // Only plain web links from Buffer become links.
   assert.doesNotMatch(html, /javascript:/);
   assert.match(html, /Maya L\./);
-  assert.doesNotMatch(html, /Dana R\.|Token expired|Ravi K\.|own words/);
+  // No post's text, like Aiko's, is kept on the finished wall.
+  assert.doesNotMatch(
+    html,
+    /Dana R\.|Token expired|Ravi K\.|Aiko(&#39;|')s own words/,
+  );
   assert.match(html, /Start your own Chorus/);
   // Posts went out, so the page brings the one-time confetti.
   assert.match(html, /<script src="\/copy.js" defer><\/script>/);

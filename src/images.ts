@@ -11,9 +11,9 @@ export const MAX_IMAGES = 4;
 export const MAX_BYTES = 4 * 1024 * 1024;
 export const MAX_ALT = 1000; // X allows 1,000 characters of alt text, the lowest of the networks
 
-// LinkedIn shows link and image posts at 1.91:1; X and Bluesky at 16:9, so they share one crop.
-// Instagram takes 4:5 to 1.91:1 and at most 1440 px wide, and Buffer turns anything else into a
-// reminder instead of posting it. 4:5 is the biggest it shows in the feed.
+// 1.91:1 is LinkedIn's crop for an image too wide for it (see cropFor). X and Bluesky show 16:9, so they
+// share one crop. Instagram takes 4:5 to 1.91:1 and at most 1440 px wide, and Buffer turns anything else
+// into a reminder instead of posting it. 4:5 is the biggest it shows in the feed.
 export const CROPS = {
   linkedin: { width: 1200, height: 627 },
   wide: { width: 1600, height: 900 },
@@ -255,8 +255,18 @@ export async function deleteImages(filter: Filter<ImageDoc>): Promise<number> {
   return found.length;
 }
 
-export function cropFor(service: string): Crop {
-  if (service === "linkedin") return "linkedin";
+// LinkedIn shows a photo whole from 3:1 wide to 4:5 tall, and a tall one takes the most room in the feed.
+// 1.91:1 is its size for link previews, not photos. So it gets the whole image when it fits.
+export function cropFor(
+  service: string,
+  image: { width: number; height: number },
+): Crop {
+  if (service === "linkedin") {
+    const ratio = image.width / image.height;
+    // A pixel off 4:5, like 1638 x 2048, still counts as 4:5.
+    if (ratio < 4 / 5 - 0.005) return "portrait";
+    return ratio > 3 ? "linkedin" : "original";
+  }
   if (service === "twitter" || service === "bluesky") return "wide";
   if (service === "instagram") return "portrait";
   return "original";

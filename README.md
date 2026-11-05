@@ -62,7 +62,7 @@ to an hour, along the sun's path.
 - **Express 5**, with server-rendered HTML through a small tagged template that escapes every value
 - **MongoDB** with the plain driver
 - Plain CSS and a few small browser scripts, no frontend framework. Pages work without JS where they can
-- **[Buffer API](https://developers.buffer.com)** (GraphQL, OAuth with PKCE) for channels and scheduling
+- **[Buffer API](https://developers.buffer.com)** (GraphQL, OAuth with PKCE) for channels, scheduling, and a note on each post that links back to its Chorus
 - **OpenAI** for the optional "Draft with AI" step
 - **sharp** for the image crops per network, **Vercel Blob** to host them
 - **Vercel** for hosting, `node --test` for tests, **Biome** for lint and formatting

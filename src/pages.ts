@@ -32,14 +32,18 @@ import { deleteUserData, tokensGoOn } from "./cleanup.ts";
 import { page } from "./html.ts";
 import {
   addImage,
+  addOwnImage,
   altProblem,
   type ChorusImage,
   claimImages,
   cropFor,
+  deleteImages,
+  IMAGE_PROBLEMS,
   imageFor,
   imageProblem,
   imagesIn,
   MAX_IMAGES,
+  ownImageOf,
   parseFocus,
   pickedImage,
   removeImage,
@@ -468,10 +472,13 @@ pages.post("/images", upload, async (req, res) => {
     return res.status(400).type("text").send(FULL);
   }
   const sent = await readUpload(req);
-  const problem = sent
-    ? await imageProblem(sent.data)
-    : "Pick an image file first.";
-  if (!sent || problem) return res.status(400).type("text").send(problem);
+  const problem = sent ? await imageProblem(sent.data) : "file";
+  if (!sent || problem) {
+    return res
+      .status(400)
+      .type("text")
+      .send(IMAGE_PROBLEMS[problem ?? "file"]);
+  }
   const image = await addImage(scope.ownerId, scope, sent.data, "", {
     x: 0.5,
     y: 0.5,
@@ -657,6 +664,9 @@ pages.get("/c/:id/post", async (req, res) => {
         aiEnabled() ? { usesLeft: AI_USES - (post.aiUses ?? 0) } : null,
         req.query.drafted === "1",
         await imagesIn({ chorusId: chorus._id }),
+        await ownImageOf(post._id),
+        bufferCanFetch(),
+        ownImageError(req.query.image),
       ),
       { viewer: viewer(session), script: "write.js" },
     ),
@@ -673,12 +683,17 @@ pages.post(
     if (!session) return res.redirect(303, `/login?next=/c/${chorus._id}/post`);
     if (isOver(chorus)) return res.redirect(303, `/c/${chorus._id}`);
     const text = typeof req.body?.text === "string" ? req.body.text : "";
+    const post = await findPost(chorus._id, session.userId);
     // A draft is saved even when it's too long: the checks stop it at approval, not here.
     const saved = await saveText(
       chorus._id,
       session.userId,
       text,
-      pickedImage(req.body?.image, await imagesIn({ chorusId: chorus._id })),
+      pickedImage(
+        req.body?.image,
+        await imagesIn({ chorusId: chorus._id }),
+        post && (await ownImageOf(post._id)),
+      ),
     );
     if (!saved) return res.redirect(303, `/c/${chorus._id}`);
     const next =
@@ -796,6 +811,72 @@ pages.post(
   },
 );
 
+// The person's own image. The editor's buttons send the whole form here, so the text is saved too and
+// nothing typed is lost. Problems go back to the editor as a code (see ownImageError).
+const OWN_IMAGE_ERRORS: Record<string, string> = {
+  ...IMAGE_PROBLEMS,
+  alt: "Describe your image, for people who can't see it.",
+  long: "Keep the description under 1,000 characters.",
+};
+
+function ownImageError(code: unknown): string | null {
+  return (typeof code === "string" && OWN_IMAGE_ERRORS[code]) || null;
+}
+
+async function draftOf(req: express.Request, res: Response) {
+  const session = readSession(req);
+  const chorus = await getChorus(String(req.params.id));
+  if (!chorus) return notFound(res, session);
+  if (!session) return res.redirect(303, `/login?next=/c/${chorus._id}/post`);
+  const post = await findPost(chorus._id, session.userId);
+  if (post?.status !== "drafting" || isOver(chorus)) {
+    return res.redirect(303, `/c/${chorus._id}`);
+  }
+  return { session, chorus, post };
+}
+
+pages.post("/c/:id/post/image", upload, async (req, res) => {
+  const found = await draftOf(req, res);
+  if (!found || !("post" in found)) return;
+  const { chorus, post } = found;
+  const back = (code?: string) =>
+    res.redirect(
+      303,
+      `/c/${chorus._id}/post${code ? `?image=${code}` : "?saved=1"}`,
+    );
+  const sent = await readUpload(req);
+  const field = (name: string) => {
+    const value = sent?.form.get(name);
+    return typeof value === "string" ? value : "";
+  };
+  await saveText(chorus._id, post.userId, field("text"));
+  if (!bufferCanFetch()) return back();
+  const problem = sent ? await imageProblem(sent.data) : "file";
+  if (!sent || problem) return back(problem ?? "file");
+  const alt = field("alt").trim();
+  const altIssue = altProblem(alt);
+  if (altIssue) return back(alt ? "long" : "alt");
+  await addOwnImage(post, sent.data, alt);
+  await saveText(chorus._id, post.userId, field("text"), "own");
+  back();
+});
+
+pages.post(
+  "/c/:id/post/image/remove",
+  express.urlencoded({ extended: false, limit: "64kb" }),
+  async (req, res) => {
+    const found = await draftOf(req, res);
+    if (!found || !("post" in found)) return;
+    const { chorus, post } = found;
+    const text = typeof req.body?.text === "string" ? req.body.text : "";
+    await deleteImages({ postId: post._id });
+    // Back to the Chorus's images, counted from the start like a new person, or none.
+    const images = await imagesIn({ chorusId: chorus._id });
+    await saveText(chorus._id, post.userId, text, images.length ? 0 : null);
+    res.redirect(303, `/c/${chorus._id}/post?saved=1`);
+  },
+);
+
 pages.get("/c/:id/post/review", async (req, res) => {
   const session = readSession(req);
   const chorus = await getChorus(req.params.id);
@@ -814,6 +895,7 @@ pages.get("/c/:id/post/review", async (req, res) => {
         result,
         await imagesIn({ chorusId: chorus._id }),
         slot,
+        await ownImageOf(post._id),
       ),
       {
         viewer: viewer(session),
@@ -860,8 +942,13 @@ pages.post(
       dueAt = relaySlots(chorus)[slot];
     }
 
-    // The image as it is now. Images can't change after the start, so neither can this.
-    const image = imageFor(await imagesIn({ chorusId: chorus._id }), post);
+    // The image as it is now. The Chorus's images can't change after the start, and the person's own
+    // image only while they are drafting.
+    const image = imageFor(
+      await imagesIn({ chorusId: chorus._id }),
+      post,
+      await ownImageOf(post._id),
+    );
     try {
       const accessToken = await getAccessToken(session.userId);
       const scheduled = await createPost(accessToken, {
@@ -872,7 +959,10 @@ pages.post(
         aiAssisted: post.aiShaped,
         saveToDraft: asDraft,
         image: image
-          ? { url: image.urls[cropFor(post.channelService)], alt: image.alt }
+          ? {
+              url: image.urls[cropFor(post.channelService, image)],
+              alt: image.alt,
+            }
           : undefined,
       });
       if (!scheduled.ok) {

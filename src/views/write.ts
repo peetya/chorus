@@ -23,7 +23,7 @@ function brief(chorus: Chorus, organizer: string): Html {
   return html`<details class="box brief-panel" open data-brief-panel>
   <summary><h2>The brief</h2></summary>
   <div class="brief-body">
-  ${chorus.note && html`<div><h3>From ${name}</h3><p>${chorus.note}</p></div>`}
+  ${chorus.note && html`<div><h3>From ${name}</h3><p class="note-text">${chorus.note}</p></div>`}
   <div>
     <h3>A few things to think about while you write</h3>
     <ol>${chorus.questions.map((question) => html`<li>${question}</li>`)}</ol>
@@ -54,6 +54,9 @@ export function writePage(
   ai: AiOffer,
   drafted: boolean,
   images: ChorusImage[],
+  own: ChorusImage | null = null,
+  canUpload = false,
+  imageError: string | null = null,
 ): Html {
   return html`<div class="page-head">
   ${crumbs(["/me", "My Choruses"], [`/c/${chorus._id}`, chorus.title])}
@@ -79,7 +82,7 @@ ${text}</textarea>
 ${checkList(result)}
     </div>
   </div>
-  ${imagePicker(images, post, organizer)}
+  ${imagePicker(images, post, organizer, own, canUpload, imageError)}
   <div class="actions inline">
     <button type="submit" class="button primary" name="action" value="approve">Approve and schedule</button>
     <button type="submit" class="button">Save draft</button>

@@ -849,6 +849,11 @@ input.mono {
   overflow-wrap: anywhere;
 }
 
+/* The organizer's own line breaks. */
+.note-text {
+  white-space: pre-line;
+}
+
 .avatar {
   width: 32px;
   height: 32px;
@@ -1902,6 +1907,27 @@ a.finished-post:hover {
   background: var(--soft);
   border-radius: 10px;
   padding: 12px 14px;
+}
+
+.own-image {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.own-image .errors {
+  margin: 0;
+}
+
+.own-image .too-big {
+  color: var(--error);
+}
+
+.own-image [hidden] {
+  display: none;
 }
 
 .review-image {

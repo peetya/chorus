@@ -177,6 +177,9 @@ function findScheduled(id: string) {
 // A post on this channel fails when it's due, so a failed post can be tried on the wall.
 const FAILING_CHANNEL = "ch_zsofia_bsky";
 
+// Seconds to wait. While it's set, every call is refused like Buffer does over the rate limit.
+export const rateLimit = { retryAfter: 0 };
+
 // Like Buffer: a refresh token works once.
 const spent = new Set<string>();
 
@@ -198,6 +201,13 @@ export function mockGraphql(
 ): unknown {
   const person = PEOPLE.find((p) => p.id === accessToken);
   if (!person) throw new Error("Buffer API error: UNAUTHORIZED (mock)");
+  if (rateLimit.retryAfter) {
+    throw new BufferApiError(
+      "RATE_LIMIT_EXCEEDED",
+      "Too many requests (mock)",
+      rateLimit.retryAfter,
+    );
+  }
 
   const operation = /^(?:query|mutation) (\w+)/.exec(query)?.[1];
   // One organization per person, named after them, like a new Buffer account.

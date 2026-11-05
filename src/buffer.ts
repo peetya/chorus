@@ -123,12 +123,15 @@ type GraphqlResponse<T> = {
 };
 
 // code is Buffer's GraphQL error code, like NOT_FOUND, or the HTTP status when there was none.
+// retryAfter is in seconds, sent with RATE_LIMIT_EXCEEDED.
 export class BufferApiError extends Error {
   code: string;
+  retryAfter?: number;
 
-  constructor(code: string, message: string) {
+  constructor(code: string, message: string, retryAfter?: number) {
     super(`Buffer API error: ${code} ${message}`.trim());
     this.code = code;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -164,7 +167,8 @@ export async function graphql<T>(
   const error = json?.errors?.[0];
   if (!res.ok || error || !json?.data) {
     const code = error?.extensions?.code ?? `HTTP ${res.status}`;
-    throw new BufferApiError(code, error?.message ?? "");
+    const retryAfter = Number(res.headers.get("retry-after")) || undefined;
+    throw new BufferApiError(code, error?.message ?? "", retryAfter);
   }
   return json.data;
 }

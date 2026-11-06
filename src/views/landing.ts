@@ -1,5 +1,6 @@
 import {
   accountNav,
+  analytics,
   DESCRIPTION,
   headTags,
   html,
@@ -19,7 +20,7 @@ export function landingPage(viewer: PageOptions["viewer"]): string {
   <link rel="preload" href="/fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/style.css">
-  <script src="/landing.js" defer></script>
+  <script src="/landing.js" defer></script>${analytics()}
 </head>
 <body>
   <div class="landing">

@@ -40,7 +40,7 @@ test("the privacy page is public, and the sign-in page links to it", async (t) =
   const base = await listen(t);
   const privacy = await fetch(`${base}/privacy`);
   assert.equal(privacy.status, 200);
-  assert.match(await privacy.text(), /No analytics, no ads, no tracking/);
+  assert.match(await privacy.text(), /Web Analytics counts the visits/);
   const login = await (await fetch(`${base}/login`)).text();
   assert.match(login, /href="\/privacy"/);
 });

@@ -85,3 +85,14 @@ test("on Vercel the card's image has its full address, and the image is the righ
   const { width, height } = await sharp("public/share.png").metadata();
   assert.equal(`${width}x${height}`, "1200x630");
 });
+
+test("on Vercel every page counts the visit, and a local server doesn't ask for the script", async (t) => {
+  const base = await listen(t);
+  const script = '<script src="/_vercel/insights/script.js" defer></script>';
+  assert.ok(!(await get(base, "/")).includes(script));
+
+  process.env.VERCEL = "1";
+  t.after(() => delete process.env.VERCEL);
+  assert.ok((await get(base, "/")).includes(script));
+  assert.ok((await get(base, "/privacy")).includes(script));
+});

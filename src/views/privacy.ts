@@ -33,11 +33,11 @@ export function privacyPage(): Html {
   <li><strong>Buffer</strong> schedules your post in your own Buffer account. Buffer's own privacy policy covers that account.</li>
   <li><strong>OpenAI</strong>, only when you click "Draft with AI": your answers and the brief go to OpenAI, which writes a first draft. OpenAI doesn't train its models on this, and keeps it for up to 30 days.</li>
   <li><strong>MongoDB Atlas</strong> holds the database, in Frankfurt.</li>
-  <li><strong>Vercel</strong> runs the site, in Frankfurt, and keeps short request logs. Images are stored with Vercel Blob, at links that are hard to guess but public, because Buffer has to fetch them.</li>
+  <li><strong>Vercel</strong> runs the site, in Frankfurt, and keeps short request logs. Images are stored with Vercel Blob, at links that are hard to guess but public, because Buffer has to fetch them. Vercel Web Analytics counts the visits: the page, the country, the browser and the site you came from. It uses no cookies and doesn't know who you are.</li>
 </ul>
 
 <h2 class="sub-title">Cookies</h2>
-<p>One cookie keeps you signed in, for up to 30 days. Another one lives for 10 minutes while you sign in. No analytics, no ads, no tracking.</p>
+<p>One cookie keeps you signed in, for up to 30 days. Another one lives for 10 minutes while you sign in. No ads, and counting the visits needs no cookie.</p>
 
 <h2 class="sub-title">Your choices</h2>
 <ul>

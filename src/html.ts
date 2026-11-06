@@ -93,6 +93,13 @@ export function headTags(
   <meta name="twitter:card" content="summary_large_image">`;
 }
 
+// Vercel Web Analytics counts visits without cookies. Vercel serves the script only on its deployments,
+// so a local server leaves it out instead of asking for a file it doesn't have.
+export function analytics(): Html {
+  if (!process.env.VERCEL) return html``;
+  return html`\n  <script src="/_vercel/insights/script.js" defer></script>`;
+}
+
 // The right side of the header, also on the landing page: the person's initials open a menu. It works
 // without JS; menu.js only closes it on a click outside or Escape.
 export function accountNav(viewer: PageOptions["viewer"]): Html {
@@ -140,7 +147,7 @@ export function page(
   <link rel="icon" href="/logo.svg" type="image/svg+xml">
   <link rel="preload" href="/fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/style.css">${["your-time.js", script ?? []].flat().map((file) => html`\n  <script src="/${file}" defer></script>`)}
+  <link rel="stylesheet" href="/style.css">${["your-time.js", script ?? []].flat().map((file) => html`\n  <script src="/${file}" defer></script>`)}${analytics()}
 </head>
 <body>
   ${header(viewer, signingIn)}
